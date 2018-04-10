@@ -44,30 +44,24 @@ public class WebServer {
 
             try {
                 System.out.println("Trying to solve: " + t.getRequestURI().getQuery());
-                solver.main(solverParams);
-                System.out.println("Response at: " + responseFileName);
+                int xStart, yStart, xFinal, yFinal, velocity;
+                xStart = Integer.parseInt(params.get("x0"));
+                yStart = Integer.parseInt(params.get("y0"));
+                xFinal = Integer.parseInt(params.get("x1"));
+                yFinal = Integer.parseInt(params.get("y1"));
+                velocity = Integer.parseInt(params.get("v"));
 
-            } catch (InvalidMazeRunningStrategyException e) {
-                e.printStackTrace();
-            } catch (InvalidCoordinatesException e) {
-                e.printStackTrace();
-            } catch (CantGenerateOutputFileException e) {
-                e.printStackTrace();
-            } catch (CantReadMazeInputFileException e) {
+                String result = Main.solve(xStart, yStart, xFinal, yFinal, velocity, params.get("s"), MAZE_DIR + params.get("m"));
+
+
+                t.sendResponseHeaders(200, result.length());
+                OutputStream os = t.getResponseBody();
+                os.write(result.getBytes());
+                os.close();
+
+            } catch (InvalidMazeRunningStrategyException | InvalidCoordinatesException | CantReadMazeInputFileException e) {
                 e.printStackTrace();
             }
-
-
-            File file = new File(responseFileName);
-            byte [] bytearray  = new byte [(int)file.length()];
-            FileInputStream fis = new FileInputStream(file);
-            BufferedInputStream bis = new BufferedInputStream(fis);
-            bis.read(bytearray, 0, bytearray.length);
-
-            t.sendResponseHeaders(200, file.length());
-            OutputStream os = t.getResponseBody();
-            os.write(bytearray,0,bytearray.length);
-            os.close();
 
         }
 

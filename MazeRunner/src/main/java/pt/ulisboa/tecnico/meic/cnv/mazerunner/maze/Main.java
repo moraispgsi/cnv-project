@@ -109,40 +109,5 @@ public class Main {
 			throw new CantGenerateOutputFileException("Problems writing to " + mazeSolvedFile + " output file!");
 		}
 	}
-
-	public static String solve(int xStart, int yStart, int xFinal, int yFinal, int velocity, String strategyName, String mazeFile)
-			throws CantReadMazeInputFileException, InvalidCoordinatesException, InvalidMazeRunningStrategyException {
-
-		if(velocity < 1 || velocity > 100) {
-			throw new IllegalArgumentException(String.format("Arg %d: velocity argument must be between 1 and 100", 4));
-		}
-
-		MazeRunningStrategy strategy = FactoryMazeRunningStrategies.CreateMazeRunningStrategy(strategyName);
-		Maze maze = null;
-
-		// Read the maze from the file
-		try {
-			FileInputStream fileIn = new FileInputStream(mazeFile);
-			ObjectInputStream in = new ObjectInputStream(fileIn);
-			maze = (Maze) in.readObject();
-			in.close();
-			fileIn.close();
-		} catch (IOException i) {
-			i.printStackTrace();
-			throw new CantReadMazeInputFileException("Problems reading " + mazeFile +" input file!");
-		} catch (ClassNotFoundException c) {
-			System.out.println("Maze class not found -> Dark stuff is happening...");
-			c.printStackTrace();
-			throw new RuntimeException("Maze class not found -> Dark stuff is happening...");
-		}
-
-		// Solve the maze.
-		strategy.solve(maze, xStart, yStart, xFinal, yFinal, velocity);
-
-		// Choose the way to render the maze and rendered it
-		RenderMaze renderMaze = new RenderMazeHTMLClientCanvas();
-		return renderMaze.render(maze, velocity);
-	}
-
 	
 }

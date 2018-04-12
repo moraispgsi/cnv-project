@@ -1,5 +1,4 @@
 package pt.ulisboa.tecnico.meic.cnv;
-
 /* ICount.java
  * Sample program using BIT -- counts the number of instructions executed.
  *

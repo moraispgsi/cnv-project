@@ -11,6 +11,7 @@ subprojects {
     repositories {
         mavenCentral()
     }
+
     dependencies {
         testCompile "junit:junit:4+"
     }
@@ -22,15 +23,29 @@ project(':server') {
 
     dependencies {
         compile project(':MazeRunner')
+        compile project(':inst')
+    }
+
+    run {
+        dependsOn(':inst:run')
     }
 
 }
 
 project(':MazeRunner') {
-
     mainClassName = 'pt.ulisboa.tecnico.meic.cnv.MazeRunner'
+}
 
-    dependencies {
+project('inst') {
+
+    mainClassName = 'pt.ulisboa.tecnico.meic.cnv.ICount'
+
+    //Instrumenting MazeRunner classes
+    run {
+        args = ['../MazeRunner/build/classes/java/main/pt/ulisboa/tecnico/meic/cnv/mazerunner/maze']
     }
 
+    dependencies {
+        compile project(':MazeRunner')
+    }
 }

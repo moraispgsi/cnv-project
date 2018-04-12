@@ -30,8 +30,6 @@ public class WebServer {
 
     static class MyHandler implements HttpHandler {
 
-        private static Main solver = new Main(); //pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.Main;
-
         @Override
         public void handle(HttpExchange t) throws IOException {
 
@@ -44,19 +42,15 @@ public class WebServer {
 
             try {
                 System.out.println("Trying to solve: " + t.getRequestURI().getQuery());
-                solver.main(solverParams);
+                Main.main(solverParams);
                 System.out.println("Response at: " + responseFileName);
 
-            } catch (InvalidMazeRunningStrategyException e) {
-                e.printStackTrace();
-            } catch (InvalidCoordinatesException e) {
-                e.printStackTrace();
-            } catch (CantGenerateOutputFileException e) {
-                e.printStackTrace();
-            } catch (CantReadMazeInputFileException e) {
+            } catch (InvalidMazeRunningStrategyException | CantReadMazeInputFileException | CantGenerateOutputFileException | InvalidCoordinatesException e) {
                 e.printStackTrace();
             }
 
+
+            ICount.printICount();
 
             File file = new File(responseFileName);
             byte [] bytearray  = new byte [(int)file.length()];

@@ -50,8 +50,6 @@ public class WebServer {
             }
 
 
-            ICount.printICount();
-
             File file = new File(responseFileName);
             byte [] bytearray  = new byte [(int)file.length()];
             FileInputStream fis = new FileInputStream(file);

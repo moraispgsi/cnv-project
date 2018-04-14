@@ -1,4 +1,3 @@
-package pt.ulisboa.tecnico.meic.cnv;
 /* ICount.java
  * Sample program using BIT -- counts the number of instructions executed.
  *
@@ -52,7 +51,7 @@ public class ICount {
         }
     }
 
-    public static synchronized void printICount() {
+    public static synchronized void printICount(String foo) {
         System.out.println(i_count + " instructions in " + b_count + " basic blocks were executed in " + m_count + " methods.");
     }
 

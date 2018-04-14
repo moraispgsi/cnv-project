@@ -35,8 +35,6 @@ project(':server') {
         doFirst {
             //use classpath with .class instead of .jar
 
-            //println "cp with jars: " + sourceSets.main.runtimeClasspath.join(':')
-
             def cp = []
 
             cp.add(sourceSets.main.output.classesDir)
@@ -55,9 +53,7 @@ project(':server') {
                     }
             }
 
-            //println "cp with class: " + cp.join(":")
             classpath = files(cp)
-
 
         }
 
@@ -67,14 +63,11 @@ project(':server') {
 project(':MazeRunner') {
     mainClassName = 'pt.ulisboa.tecnico.meic.cnv.MazeRunner'
 
-/*    dependencies {
-        compile project(':inst')
-    }*/
 }
 
 project('inst') {
 
-    mainClassName = 'pt.ulisboa.tecnico.meic.cnv.ICount'
+    mainClassName = 'ICount'
 
     //Instrumenting MazeRunner classes
     run {
@@ -82,7 +75,7 @@ project('inst') {
     }
 
     dependencies {
-        compile project(':MazeRunner')
+        runtime project(':MazeRunner')
     }
 
 }

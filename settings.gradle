@@ -8,4 +8,4 @@
  */
 
 rootProject.name = 'cnv-project'
-include 'server','MazeRunner','inst'
+include 'server','MazeRunner','inst', 'LoadBalancer', 'AutoScaler'

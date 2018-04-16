@@ -69,6 +69,9 @@ public class ICount {
         List<String> infilenames = new ArrayList<String>();
 
         File[] files = root.listFiles();
+        if(files == null) {
+            return new ArrayList<>();
+        }
         for (File file : files) {
             if (file.isFile()) {
                 infilenames.add(file.getAbsolutePath()); //get absolute path

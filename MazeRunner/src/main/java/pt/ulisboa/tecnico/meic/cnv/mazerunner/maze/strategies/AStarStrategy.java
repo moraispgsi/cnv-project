@@ -6,10 +6,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.RobotController;
+
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.Maze;
-import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.InvalidCoordinatesException;
+import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.RobotController;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.strategies.datastructure.Coordinate;
+import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.InvalidCoordinatesException;
 
 public class AStarStrategy extends MazeRunningStrategy {
 	

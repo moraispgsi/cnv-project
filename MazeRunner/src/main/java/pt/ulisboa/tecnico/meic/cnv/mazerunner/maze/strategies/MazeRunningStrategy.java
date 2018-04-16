@@ -5,7 +5,7 @@ import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.InvalidCoordinates
 
 public abstract class MazeRunningStrategy {
 
-	public final void solve(Maze maze, int xStart, int yStart, int xFinal, int yFinal, int velocity) 
+	public final void solve(Maze maze, int xStart, int yStart, int xFinal, int yFinal, int velocity)
 			throws InvalidCoordinatesException  {
 		if(maze.isWall(xStart, yStart) || maze.isWall(xFinal, yFinal)) {
 			throw new InvalidCoordinatesException("Trying starting inside a wall or outside the maze!");

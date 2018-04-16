@@ -20,14 +20,24 @@ subprojects {
 
 }
 
-project(':server') {
+project(':AutoScaler') {
+    mainClassName = 'pt.ulisboa.tecnico.meic.cnv.autoscaler.AutoScaler'
+}
 
+project(':LoadBalancer') {
+
+    mainClassName = 'pt.ulisboa.tecnico.meic.cnv.loadbalancer.WebServer'
+}
+
+
+project(':server') {
     mainClassName = 'pt.ulisboa.tecnico.meic.cnv.WebServer'
 
     dependencies {
         compile project(':MazeRunner')
         compile project(':inst')
     }
+
 
     run {
         dependsOn(':inst:run')
@@ -62,11 +72,9 @@ project(':server') {
 
 project(':MazeRunner') {
     mainClassName = 'pt.ulisboa.tecnico.meic.cnv.MazeRunner'
-
 }
 
 project('inst') {
-
     mainClassName = 'ICount'
 
     //Instrumenting MazeRunner classes

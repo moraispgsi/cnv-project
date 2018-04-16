@@ -43,12 +43,12 @@ public class RenderMazeHTML implements RenderMaze {
 	        xSVG += 20;
 	        for ( int x = 0; x < maze.getWidth(); x++ ) {
 	        	char pos = 'E';
-				try {
-					pos = maze.getPos(x, y);
-				} catch (InvalidCoordinatesException e) {
-					e.printStackTrace();
-				}
-	        	if(pos == Maze.WALL_CHAR) {
+                try {
+                    pos = maze.getPos(x, y);
+                } catch (InvalidCoordinatesException e) {
+                    e.printStackTrace();
+                }
+                if(pos == Maze.WALL_CHAR) {
 	        		b.append(wallRegular(xSVG, ySVG,20));
 	        	} else if(pos == Maze.VISITED_CHAR) {
 	        		b.append(circles(xSVG, ySVG, radiusSmall, "grey"));

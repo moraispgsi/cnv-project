@@ -2,7 +2,6 @@
 # ------
 .gradle
 
-build/
 /build
 /buildSrc/build
 /buildSrc/subprojects/*/build
@@ -10,8 +9,6 @@ build/
 /subprojects/docs/src/samples/*/*/build
 /subprojects/internal-android-performance-testing/build-android-libs
 
-BasicBlock.class
-*.class
 
 # IDEA
 # ----

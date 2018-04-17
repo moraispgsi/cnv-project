@@ -17,21 +17,25 @@ import java.util.concurrent.Executors;
 
 public class WebServer {
 
+    public static final int PORT = 8000;
 
     static final String  MAZE_DIR = "src/main/resources/mazes/";
     static final String RESULT_DIR = "src/main/resources/results/";
 
     public static void main(String[] args) throws Exception {
-        HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
+        System.out.println ("Init web server...");
+        HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
         server.createContext("/mzrun.html", new MyHandler());
         server.setExecutor(Executors.newCachedThreadPool()); // creates a non-limited Executor
         server.start();
+        System.out.println ("Web server listening on port " + PORT);
     }
 
     static class MyHandler implements HttpHandler {
 
         @Override
         public void handle(HttpExchange t) throws IOException {
+            long threadId = Thread.currentThread ().getId ();
 
             Map<String, String> params = queryToMap(t.getRequestURI().getQuery());
 
@@ -41,9 +45,9 @@ public class WebServer {
                     params.get("y1"), params.get("v"), params.get("s"), MAZE_DIR + params.get("m"), responseFileName};
 
             try {
-                System.out.println("Trying to solve: " + t.getRequestURI().getQuery());
+                System.out.println("Thread with id: '" + threadId + "' > Trying to solve: " + t.getRequestURI().getQuery());
                 Main.main(solverParams);
-                System.out.println("Response at: " + responseFileName);
+                System.out.println("Thread with id: '" + threadId + "' > Response at: " + responseFileName);
 
             } catch (InvalidMazeRunningStrategyException | CantReadMazeInputFileException | CantGenerateOutputFileException | InvalidCoordinatesException e) {
                 e.printStackTrace();

@@ -79,7 +79,7 @@ project(':MazeRunner') {
 }
 
 project('inst') {
-    mainClassName = 'ICount'
+    mainClassName = 'Instrumentation'
 
     //Instrumenting MazeRunner classes
     run {

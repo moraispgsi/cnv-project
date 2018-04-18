@@ -48,7 +48,7 @@ project(':AutoScaler') {
         webServer {
             host = 'ec2-35-180-33-92.eu-west-3.compute.amazonaws.com'
             user = 'ec2-user'
-            identity = file("${System.properties['user.home']}/loadbalancerAndAutoScalerKeypair.pem") //pem file on HOME DIR, or change me
+            identity = file("../keypairs/loadbalancerAndAutoScalerKeypair.pem") //pem file on HOME DIR, or change me
         }
     }
 }
@@ -61,7 +61,7 @@ project(':LoadBalancer') {
         webServer {
             host = 'ec2-35-180-33-92.eu-west-3.compute.amazonaws.com'
             user = 'ec2-user'
-            identity = file("${System.properties['user.home']}/loadbalancerAndAutoScalerKeypair.pem") //pem file on HOME DIR, or change me
+            identity = file("../keypairs/loadbalancerAndAutoScalerKeypair.pem") //pem file on HOME DIR, or change me
         }
     }
 }
@@ -111,7 +111,7 @@ project(':server') {
         webServer {
             host = 'ec2-35-180-33-92.eu-west-3.compute.amazonaws.com'
             user = 'ec2-user'
-            identity = file("${System.properties['user.home']}/ec2InstanceKeyPair.pem") //pem file on HOME DIR, or change me
+            identity = file("../keypairs/ec2InstanceKeyPair.pem") //pem file on HOME DIR, or change me
         }
     }
 

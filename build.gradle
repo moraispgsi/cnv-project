@@ -79,7 +79,7 @@ project(':MazeRunner') {
 }
 
 project('inst') {
-    mainClassName = 'Instrumentation'
+    mainClassName = 'pt.ulisboa.tecnico.meic.cnv.instrument.Instrumentation'
 
     //Instrumenting MazeRunner classes
     run {

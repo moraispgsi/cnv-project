@@ -9,7 +9,10 @@ import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.CantReadMazeInputF
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.InvalidCoordinatesException;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.InvalidMazeRunningStrategyException;
 
+import pt.ulisboa.tecnico.meic.cnv.instrument.Instrumentation;
+
 import java.io.*;
+
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
@@ -36,7 +39,11 @@ public class WebServer {
         @Override
         public void handle(HttpExchange t) throws IOException {
             long threadId = Thread.currentThread ().getId ();
-
+            try {
+                Instrumentation.metricsHashMap.put (threadId, new Instrumentation.Metrics ());
+            }catch (Exception e) {
+                System.out.println (e);
+            }
             Map<String, String> params = queryToMap(t.getRequestURI().getQuery());
 
             String responseFileName = RESULT_DIR + params.hashCode() + ".html";
@@ -45,14 +52,22 @@ public class WebServer {
                     params.get("y1"), params.get("v"), params.get("s"), MAZE_DIR + params.get("m"), responseFileName};
 
             try {
+                //System.out.println ("Method before count > " + Instrumentation.metricsHashMap.get (threadId).methodInvocationCount);
                 System.out.println("Thread with id: '" + threadId + "' > Trying to solve: " + t.getRequestURI().getQuery());
                 Main.main(solverParams);
                 System.out.println("Thread with id: '" + threadId + "' > Response at: " + responseFileName);
+
+                System.out.println ("Method after count > " + Instrumentation.metricsHashMap.get (threadId).methodInvocationCount);
+
+                //Metrics metrics = pt.ulisboa.tecnico.meic.cnv.instrument.Instrumentation.getMetricsByThreadId(threadId);
+                // save metrics with request date on dynamo
 
             } catch (InvalidMazeRunningStrategyException | CantReadMazeInputFileException | CantGenerateOutputFileException | InvalidCoordinatesException e) {
                 e.printStackTrace();
             }
 
+
+            // chamar a tool insturmentation e obter os dados de insrumentacao peloa thread id e escrever no dynamo
 
             File file = new File(responseFileName);
             byte [] bytearray  = new byte [(int)file.length()];

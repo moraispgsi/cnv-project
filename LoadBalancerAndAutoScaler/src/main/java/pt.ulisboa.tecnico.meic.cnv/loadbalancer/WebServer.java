@@ -9,7 +9,6 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -17,17 +16,13 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 
+
 public class WebServer {
-    private static List<Instance> instances = new ArrayList<> ();
 
     public static void main(String[] args) throws Exception {
-
-        // Autoscaler -> inicia uma instância baseada numa imagem!!!
-
         HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
         server.createContext("/mzrun.html", new MyHandler());
         server.setExecutor(Executors.newCachedThreadPool()); // creates a non-limited Executor
@@ -45,11 +40,11 @@ public class WebServer {
             DynamoDBMapper mapper = new DynamoDBMapper(client);
             DynamoDBScanExpression scanExpression = new DynamoDBScanExpression();
             try{
-                List<TableMetrics> result = mapper.scan(TableMetrics.class, scanExpression);
+                List<TableInstances> result = mapper.scan(TableInstances.class, scanExpression);
                 System.out.println(result.toString());
 
-                for (TableMetrics instance : result) {
-                    //System.out.println(instance.url);
+                for (TableInstances instance : result) {
+                    System.out.println(instance.url);
                 }
 
             } catch(Exception exception) {

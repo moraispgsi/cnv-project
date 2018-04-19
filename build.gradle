@@ -53,6 +53,19 @@ project(':AutoScaler') {
     }
 }
 
+project(':LoadBalancerAndAutoScaler') {
+    mainClassName = 'pt.ulisboa.tecnico.meic.cnv.loadbalancer.WebServer'
+
+    //Deploy to AWS
+    remotes {
+        webServer {
+            host = 'ec2-35-180-33-92.eu-west-3.compute.amazonaws.com'
+            user = 'ec2-user'
+            identity = file("../keypairs/loadbalancerAndAutoScalerKeypair.pem") //pem file on HOME DIR, or change me
+        }
+    }
+}
+/*
 project(':LoadBalancer') {
     mainClassName = 'pt.ulisboa.tecnico.meic.cnv.loadbalancer.WebServer'
 
@@ -65,7 +78,7 @@ project(':LoadBalancer') {
         }
     }
 }
-
+*/
 
 project(':server') {
     mainClassName = 'pt.ulisboa.tecnico.meic.cnv.WebServer'

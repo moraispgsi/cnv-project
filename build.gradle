@@ -86,7 +86,6 @@ project(':server') {
 
             cp.add(sourceSets.main.output.classesDir)
             cp.add(sourceSets.main.output.resourcesDir)
-
             configurations.runtime.getAllDependencies().each { dep ->
                 if (dep instanceof ProjectDependency) {
                     def depProj = dep.getDependencyProject()
@@ -99,7 +98,6 @@ project(':server') {
                         cp.add(file)
                     }
             }
-
             classpath = files(cp)
 
         }
@@ -119,11 +117,12 @@ project(':server') {
 
 project(':MazeRunner') {
     mainClassName = 'pt.ulisboa.tecnico.meic.cnv.MazeRunner'
+
 }
 
 project('inst') {
-    mainClassName = 'pt.ulisboa.tecnico.meic.cnv.instrument.Instrumentation'
-
+    mainClassName = 'Instrumentation'
+    //pt.ulisboa.tecnico.meic.cnv.instrument.
     dependencies {
         runtime project(':MazeRunner')
     }

@@ -9,7 +9,7 @@ import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.CantReadMazeInputF
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.InvalidCoordinatesException;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.InvalidMazeRunningStrategyException;
 
-import pt.ulisboa.tecnico.meic.cnv.instrument.Instrumentation;
+//import Instrumentation;
 
 import java.io.*;
 
@@ -40,8 +40,10 @@ public class WebServer {
         public void handle(HttpExchange t) throws IOException {
             long threadId = Thread.currentThread ().getId ();
             try {
-                Instrumentation.metricsHashMap.put (threadId, new Instrumentation.Metrics ());
+                //new Instrumentation();
+                //Instrumentation.metricsHashMap.put (threadId, new Instrumentation.Metrics ());
             }catch (Exception e) {
+                System.out.println ("here");
                 System.out.println (e);
             }
             Map<String, String> params = queryToMap(t.getRequestURI().getQuery());
@@ -57,9 +59,9 @@ public class WebServer {
                 Main.main(solverParams);
                 System.out.println("Thread with id: '" + threadId + "' > Response at: " + responseFileName);
 
-                System.out.println ("Method after count > " + Instrumentation.metricsHashMap.get (threadId).methodInvocationCount);
+                //System.out.println ("Method after count > " + Instrumentation.metricsHashMap.get (threadId).methodInvocationCount);
 
-                //Metrics metrics = pt.ulisboa.tecnico.meic.cnv.instrument.Instrumentation.getMetricsByThreadId(threadId);
+                //Metrics metrics = Instrumentation.getMetricsByThreadId(threadId);
                 // save metrics with request date on dynamo
 
             } catch (InvalidMazeRunningStrategyException | CantReadMazeInputFileException | CantGenerateOutputFileException | InvalidCoordinatesException e) {

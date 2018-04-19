@@ -22,8 +22,8 @@ public class WebServer {
 
     public static final int PORT = 8000;
 
-    static final String  MAZE_DIR = "src/main/resources/mazes/";
-    static final String RESULT_DIR = "src/main/resources/results/";
+    static final String  MAZE_DIR = "../resources/mazes/";
+    static final String RESULT_DIR = "../resources/results/";
 
     public static void main(String[] args) throws Exception {
         System.out.println ("Init web server...");
@@ -50,6 +50,7 @@ public class WebServer {
 
             String[] solverParams = new String[]{params.get("x0"), params.get("y0"), params.get("x1"),
                     params.get("y1"), params.get("v"), params.get("s"), MAZE_DIR + params.get("m"), responseFileName};
+
 
             try {
                 //System.out.println ("Method before count > " + Instrumentation.metricsHashMap.get (threadId).methodInvocationCount);

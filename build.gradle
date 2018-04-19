@@ -7,7 +7,6 @@ subprojects {
     apply plugin: 'application'
 
 
-
     repositories {
         mavenCentral()
     }
@@ -18,7 +17,6 @@ subprojects {
     }
 
     applicationDefaultJvmArgs = ['-XX:-UseSplitVerifier']
-
 
 
 
@@ -48,7 +46,7 @@ project(':AutoScaler') {
         webServer {
             host = 'ec2-35-180-33-92.eu-west-3.compute.amazonaws.com'
             user = 'ec2-user'
-            identity = file("../keypairs/loadbalancerAndAutoScalerKeypair.pem") //pem file on HOME DIR, or change me
+            identity = file("../keypairs/loadbalancerAndAutoScalerKeypair.pem")
         }
     }
 }
@@ -61,7 +59,7 @@ project(':LoadBalancer') {
         webServer {
             host = 'ec2-35-180-33-92.eu-west-3.compute.amazonaws.com'
             user = 'ec2-user'
-            identity = file("../keypairs/loadbalancerAndAutoScalerKeypair.pem") //pem file on HOME DIR, or change me
+            identity = file("../keypairs/loadbalancerAndAutoScalerKeypair.pem")
         }
     }
 }
@@ -76,42 +74,19 @@ project(':server') {
     }
 
 
-    run {
-        dependsOn(':inst:run')
-
-        doFirst {
-            //use classpath with .class instead of .jar
-
-            def cp = []
-
-            cp.add(sourceSets.main.output.classesDir)
-            cp.add(sourceSets.main.output.resourcesDir)
-
-            configurations.runtime.getAllDependencies().each { dep ->
-                if (dep instanceof ProjectDependency) {
-                    def depProj = dep.getDependencyProject()
-                    def proj = project(depProj.path)
-                    cp.add(proj.sourceSets.main.output.classesDir)
-                    cp.add(proj.sourceSets.main.output.resourcesDir)
-                }
-                else
-                    project.configurations.runtime.files(dep).each { file ->
-                        cp.add(file)
-                    }
-            }
-
-            classpath = files(cp)
-
-        }
-
-    }
-
     //Deploy to AWS
     remotes {
         webServer {
             host = 'ec2-35-180-33-92.eu-west-3.compute.amazonaws.com'
             user = 'ec2-user'
-            identity = file("../keypairs/ec2InstanceKeyPair.pem") //pem file on HOME DIR, or change me
+            identity = file("../keypairs/ec2InstanceKeyPair.pem")
+        }
+    }
+
+    distZip {
+        into('server') {
+            from '..'
+            include 'resources/*/*'
         }
     }
 
@@ -119,17 +94,17 @@ project(':server') {
 
 project(':MazeRunner') {
     mainClassName = 'pt.ulisboa.tecnico.meic.cnv.MazeRunner'
+
+    jar.dependsOn(':inst:run')
 }
 
 project('inst') {
     mainClassName = 'pt.ulisboa.tecnico.meic.cnv.instrument.Instrumentation'
 
-    dependencies {
-        runtime project(':MazeRunner')
-    }
 
     //Instrumenting MazeRunner classes
     run {
+        dependsOn(':MazeRunner:compileJava')
         args = ['../MazeRunner/build/classes/java/main/pt/ulisboa/tecnico/meic/cnv/mazerunner/maze']
     }
 

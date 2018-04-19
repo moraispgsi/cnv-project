@@ -4,9 +4,10 @@ import org.joda.time.Period;
 import org.joda.time.format.PeriodFormatter;
 import org.joda.time.format.PeriodFormatterBuilder;
 
+import pt.ulisboa.tecnico.meic.cnv.loadbalancer.DynamoDB;
+import pt.ulisboa.tecnico.meic.cnv.loadbalancer.TableMetrics;
+
 import java.io.File;
-import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 
@@ -131,10 +132,12 @@ public class Instrumentation {
                 .printZeroNever()
                 .toFormatter();
         String elapsed = formatter.print(period);
-
         System.out.println ("Thread " + threadId + "recovered the following metrics: \n" +
         metricsHashMap.get (threadId));
         System.out.println ("Took: " + elapsed);
+        TableMetrics metrics = DynamoDB.getInstance ().getIncompleteMetricByThreadId (threadId);
+        //metrics.
+        // remove metrics created by the thread
         metricsHashMap.remove (threadId);
     }
 

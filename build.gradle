@@ -61,7 +61,7 @@ project(':LoadBalancerAndAutoScaler') {
     //Deploy to AWS
     remotes {
         webServer {
-            host = 'ec2-35-180-33-92.eu-west-3.compute.amazonaws.com'
+            host = 'ec2-35-180-13-114.eu-west-3.compute.amazonaws.com'
             user = 'ec2-user'
             identity = file("../keypairs/loadbalancerAndAutoScalerKeypair.pem") //pem file on HOME DIR, or change me
         }
@@ -123,9 +123,16 @@ project(':server') {
     //Deploy to AWS
     remotes {
         webServer {
-            host = 'ec2-35-180-33-92.eu-west-3.compute.amazonaws.com'
+            host = 'ec2-35-180-51-245.eu-west-3.compute.amazonaws.com'
             user = 'ec2-user'
             identity = file("../keypairs/ec2InstanceKeyPair.pem") //pem file on HOME DIR, or change me
+        }
+    }
+
+    distZip {
+        into('server') {
+            from '..'
+            include 'resources/*/*'
         }
     }
 
@@ -134,17 +141,22 @@ project(':server') {
 project(':MazeRunner') {
     mainClassName = 'pt.ulisboa.tecnico.meic.cnv.MazeRunner'
 
+    jar.dependsOn(':inst:run')
 }
 
 project('inst') {
     mainClassName = 'Instrumentation'
+
     //pt.ulisboa.tecnico.meic.cnv.instrument.
     dependencies {
         runtime project(':MazeRunner')
         compile project(":LoadBalancerAndAutoScaler")
     }
+
+
     //Instrumenting MazeRunner classes
     run {
+        dependsOn(':MazeRunner:compileJava')
         args = ['../MazeRunner/build/classes/java/main/pt/ulisboa/tecnico/meic/cnv/mazerunner/maze']
     }
 

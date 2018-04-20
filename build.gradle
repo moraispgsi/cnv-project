@@ -92,6 +92,9 @@ project(':MazeRunner') {
 project('inst') {
     mainClassName = 'Instrumentation'
 
+    dependencies {
+        compile project(":LoadBalancerAndAutoScaler")
+    }
 
     //Instrumenting MazeRunner classes
     run {

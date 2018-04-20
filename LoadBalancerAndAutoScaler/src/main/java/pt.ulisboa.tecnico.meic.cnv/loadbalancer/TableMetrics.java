@@ -1,5 +1,6 @@
 package pt.ulisboa.tecnico.meic.cnv.loadbalancer;
 
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 
@@ -18,11 +19,16 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
     private String strategy;
     private int velocity;
     // metrics
-    private long numberInstructions;
-    private long methodCount;
-    private long objectCreationCount;
-    private long newArrayCount;
+    private long instructionsCount;
+    private long methodInvocationCount;
+    private long objectAllocationCount;
+    private long arrayAllocationCount;
 
+
+    // necessary for the mapper scan
+    public TableMetrics () {
+
+    }
 
     public TableMetrics (String key, boolean completed, long threadId, int initX, int initY, int finalX, int finalY,
                          String maze, String strategy, int velocity) {
@@ -36,10 +42,10 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.maze = maze;
         this.strategy = strategy;
         this.velocity = velocity;
-        this.numberInstructions = 0;
-        this.methodCount = 0;
-        this.objectCreationCount = 0;
-        this.newArrayCount = 0;
+        this.instructionsCount = 0;
+        this.methodInvocationCount = 0;
+        this.objectAllocationCount = 0;
+        this.arrayAllocationCount = 0;
     }
 
     @DynamoDBHashKey (attributeName = "key") public String getKey () {
@@ -50,7 +56,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.key = key;
     }
 
-    @DynamoDBHashKey (attributeName = "completed") public boolean getCompleted () {
+    @DynamoDBAttribute (attributeName = "completed") public boolean getCompleted () {
         return completed;
     }
 
@@ -58,7 +64,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.completed = completed;
     }
 
-    @DynamoDBHashKey (attributeName = "threadId") public long getThreadId () {
+    @DynamoDBAttribute (attributeName = "threadId") public long getThreadId () {
         return threadId;
     }
 
@@ -66,7 +72,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.threadId = threadId;
     }
 
-    @DynamoDBHashKey (attributeName = "initX") public int getInitX () {
+    @DynamoDBAttribute (attributeName = "initX") public int getInitX () {
         return initX;
     }
 
@@ -74,7 +80,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.initX = initX;
     }
 
-    @DynamoDBHashKey (attributeName = "initY") public int getInitY () {
+    @DynamoDBAttribute (attributeName = "initY") public int getInitY () {
         return initY;
     }
 
@@ -82,7 +88,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.initY = initY;
     }
 
-    @DynamoDBHashKey (attributeName = "finalX") public int getFinalX () {
+    @DynamoDBAttribute (attributeName = "finalX") public int getFinalX () {
         return finalX;
     }
 
@@ -90,7 +96,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.finalX = finalX;
     }
 
-    @DynamoDBHashKey (attributeName = "finalY") public int getFinalY () {
+    @DynamoDBAttribute (attributeName = "finalY") public int getFinalY () {
         return finalY;
     }
 
@@ -98,7 +104,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.finalY = finalY;
     }
 
-    @DynamoDBHashKey (attributeName = "maze") public String getMaze () {
+    @DynamoDBAttribute (attributeName = "maze") public String getMaze () {
         return maze;
     }
 
@@ -106,7 +112,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.maze = maze;
     }
 
-    @DynamoDBHashKey (attributeName = "strategy") public String getStrategy () {
+    @DynamoDBAttribute (attributeName = "strategy") public String getStrategy () {
         return strategy;
     }
 
@@ -114,7 +120,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.strategy = strategy;
     }
 
-    @DynamoDBHashKey (attributeName = "velocity") public int getVelocity () {
+    @DynamoDBAttribute (attributeName = "velocity") public int getVelocity () {
         return velocity;
     }
 
@@ -122,36 +128,43 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.velocity = velocity;
     }
 
-
-    @DynamoDBHashKey (attributeName = "numberInstructions") public long getNumberInstructions () {
-        return numberInstructions;
+    @DynamoDBAttribute (attributeName = "instructionsCount") public long getInstructionsCount () {
+        return instructionsCount;
     }
 
-    public void setNumberInstructions (long numberInstructions) {
-        this.numberInstructions = numberInstructions;
+    public void setInstructionsCount (long instructionsCount) {
+        this.instructionsCount = instructionsCount;
     }
 
-    @DynamoDBHashKey (attributeName = "methodCount") public long getMethodCount () {
-        return methodCount;
+    @DynamoDBAttribute (attributeName = "methodInvocationCount") public long getMethodInvocationCount () {
+        return methodInvocationCount;
     }
 
-    public void setMethodCount (long methodCount) {
-        this.methodCount = methodCount;
+    public void setMethodInvocationCount (long methodInvocationCount) {
+        this.methodInvocationCount = methodInvocationCount;
     }
 
-    @DynamoDBHashKey (attributeName = "objectCreationCount") public long getObjectCreationCount () {
-        return objectCreationCount;
+    @DynamoDBAttribute (attributeName = "objectAllocationCount") public long getObjectAllocationCount () {
+        return objectAllocationCount;
     }
 
-    public void setObjectCreationCount (long objectCreationCount) {
-        this.objectCreationCount = objectCreationCount;
+    public void setObjectAllocationCount (long objectAllocationCount) {
+        this.objectAllocationCount = objectAllocationCount;
     }
 
-    @DynamoDBHashKey (attributeName = "newArrayCount") public long getNewArrayCount () {
-        return newArrayCount;
+    @DynamoDBAttribute (attributeName = "arrayAllocationCount") public long getArrayAllocationCount () {
+        return arrayAllocationCount;
     }
 
-    public void setNewArrayCount (long newArrayCount) {
-        this.newArrayCount = newArrayCount;
+    public void setArrayAllocationCount (long arrayAllocationCount) {
+        this.arrayAllocationCount = arrayAllocationCount;
+    }
+
+    @Override public String toString () {
+        return "TableMetrics{" + "key='" + key + '\'' + ", completed=" + completed + ", threadId=" + threadId +
+                ", initX=" + initX + ", initY=" + initY + ", finalX=" + finalX + ", finalY=" + finalY + ", maze='" +
+                maze + '\'' + ", strategy='" + strategy + '\'' + ", velocity=" + velocity + ", instructionsCount=" +
+                instructionsCount + ", methodInvocationCount=" + methodInvocationCount + ", objectAllocationCount=" +
+                objectAllocationCount + ", arrayAllocationCount=" + arrayAllocationCount + '}';
     }
 }

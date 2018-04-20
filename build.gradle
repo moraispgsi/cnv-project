@@ -40,6 +40,7 @@ subprojects {
 
 }
 
+/*
 project(':AutoScaler') {
     mainClassName = 'pt.ulisboa.tecnico.meic.cnv.autoscaler.AutoScaler'
 
@@ -52,6 +53,7 @@ project(':AutoScaler') {
         }
     }
 }
+*/
 
 project(':LoadBalancerAndAutoScaler') {
     mainClassName = 'pt.ulisboa.tecnico.meic.cnv.loadbalancer.WebServer'
@@ -86,6 +88,7 @@ project(':server') {
     dependencies {
         compile project(':MazeRunner')
         compile project(':inst')
+        compile project(":LoadBalancerAndAutoScaler")
     }
 
 
@@ -138,8 +141,8 @@ project('inst') {
     //pt.ulisboa.tecnico.meic.cnv.instrument.
     dependencies {
         runtime project(':MazeRunner')
+        compile project(":LoadBalancerAndAutoScaler")
     }
-
     //Instrumenting MazeRunner classes
     run {
         args = ['../MazeRunner/build/classes/java/main/pt/ulisboa/tecnico/meic/cnv/mazerunner/maze']

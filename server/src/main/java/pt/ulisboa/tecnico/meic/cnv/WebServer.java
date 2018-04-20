@@ -65,8 +65,10 @@ public class WebServer {
             } catch (InvalidMazeRunningStrategyException | CantReadMazeInputFileException | CantGenerateOutputFileException |
                     InvalidCoordinatesException | NumberFormatException e) {
                 e.printStackTrace ();
-                // delete record pre created by the thread
+                // delete record pre created by the thread, because the request wasn't finished
                 DynamoDB.getInstance ().deleteIncompleteMetricByThreadId (threadId);
+            } catch (Exception e) {
+                e.printStackTrace ();
             }
 
             File file = new File (responseFileName);

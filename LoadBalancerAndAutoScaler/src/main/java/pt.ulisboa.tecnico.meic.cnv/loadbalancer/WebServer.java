@@ -22,16 +22,18 @@ import java.util.List;
 import java.util.concurrent.Executors;
 
 public class WebServer {
+    private static final int PORT = 8000;
     private static List<Instance> instances = new ArrayList<> ();
 
     public static void main(String[] args) throws Exception {
-
         // Autoscaler -> inicia uma instância baseada numa imagem!!!
-
-        HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
+        // autoscaler.initMachines(1);  // algo do genero
+        System.out.println ("Init load balancer web server...");
+        HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
         server.createContext("/mzrun.html", new MyHandler());
         server.setExecutor(Executors.newCachedThreadPool()); // creates a non-limited Executor
         server.start();
+        System.out.println ("ILoad balancer listening on port " + PORT);
     }
 
     static class MyHandler implements HttpHandler {

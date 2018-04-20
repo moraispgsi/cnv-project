@@ -7,6 +7,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 
+import javax.xml.bind.SchemaOutputResolver;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,7 +29,16 @@ public final class DynamoDB {
         }
         return instance;
     }
-
+/*
+criar uma nova thread para guardar, apagar, ...
+new Thread(new Runnable() {
+         @Override
+         public void run() {
+             dynamoDBMapper.save(newsItem);
+                 // Item saved
+         }
+     }).start();
+ */
     // todo
     private void createTables() {
 
@@ -41,21 +51,31 @@ public final class DynamoDB {
             return mapper.scan(TableMetrics.class, scanExpression);
 
         } catch(Exception exception) {
+            System.out.println ("falhei aqui");
             exception.printStackTrace ();
         }
-        return new ArrayList<> ();
+        return null;
     }
 
-    public void writeValues (TableMetrics instance) {
-        DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
-        mapper.save(instance);
+    public void writeValues (final TableMetrics instance) {
+        final DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
+        try {
+            mapper.save(instance);
+
+        } catch (Exception exception) {
+            System.out.println (instance);
+            exception.printStackTrace ();
+        }
     }
 
     public TableMetrics getIncompleteMetricByThreadId (long threadId) {
         List<TableMetrics> metrics = getListValues ();
-        for (TableMetrics metric : metrics) {
-            if (metric.getThreadId () == threadId && !metric.getCompleted ()) {
-                return metric;
+        if (metrics != null) {
+            for (TableMetrics metric : metrics) {
+                if (metric.getThreadId () == threadId && !metric.getCompleted ()) {
+                    System.out.println ("Metric found: " + metric);
+                    return metric;
+                }
             }
         }
         return null;
@@ -64,7 +84,12 @@ public final class DynamoDB {
     public void deleteIncompleteMetricByThreadId (long threadId) {
         DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
         TableMetrics metric = getIncompleteMetricByThreadId (threadId);
-        mapper.delete (metric);
+        try {
+            mapper.delete (metric);
+
+        } catch (Exception exception) {
+            exception.printStackTrace ();
+        }
     }
 
 

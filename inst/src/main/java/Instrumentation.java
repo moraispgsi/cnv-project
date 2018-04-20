@@ -3,9 +3,9 @@ import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.joda.time.format.PeriodFormatter;
 import org.joda.time.format.PeriodFormatterBuilder;
-
 import pt.ulisboa.tecnico.meic.cnv.loadbalancer.DynamoDB;
 import pt.ulisboa.tecnico.meic.cnv.loadbalancer.TableMetrics;
+
 
 import java.io.File;
 import java.util.*;
@@ -91,6 +91,7 @@ public class Instrumentation {
             metricsHashMap.put (threadId, metrics);
         }catch (NullPointerException e){
             metricsHashMap.put (threadId, new Metrics ());
+            metrics = metricsHashMap.get (threadId);
             metrics.methodInvocationCount++;
             metricsHashMap.put (threadId, metrics);
         }
@@ -108,10 +109,10 @@ public class Instrumentation {
         Metrics metrics = metricsHashMap.get (threadId);
         switch (type) {
             case InstructionTable.NEW:
-                metrics.objectCreationCount++;
+                metrics.objectAllocationCount++;
                 break;
             case InstructionTable.newarray:
-                metrics.newArrayCount++;
+                metrics.arrayAllocationCount++;
                 break;
         }
         metricsHashMap.put (threadId, metrics);
@@ -121,7 +122,8 @@ public class Instrumentation {
     public static synchronized void classInstrumentation (String name) {
         // write to dynamo
         long threadId = Thread.currentThread ().getId ();
-        DateTime d1 = metricsHashMap.get (threadId).init;
+        Metrics metrics = metricsHashMap.get(threadId);
+        DateTime d1 = metrics.init;
         DateTime d2 = new DateTime();
         Period period = new Period(d1, d2);
         PeriodFormatter formatter = new PeriodFormatterBuilder ()
@@ -132,11 +134,18 @@ public class Instrumentation {
                 .printZeroNever()
                 .toFormatter();
         String elapsed = formatter.print(period);
-        System.out.println ("Thread " + threadId + "recovered the following metrics: \n" +
-        metricsHashMap.get (threadId));
+        System.out.println ("Thread " + threadId + "recovered the following metrics: \n" + metrics);
         System.out.println ("Took: " + elapsed);
-        TableMetrics metrics = DynamoDB.getInstance ().getIncompleteMetricByThreadId (threadId);
-        //metrics.
+        // append metrics to the input request data
+        TableMetrics instanceMetrics = DynamoDB.getInstance ().getIncompleteMetricByThreadId (threadId);
+        instanceMetrics.setCompleted (true);
+        instanceMetrics.setInstructionsCount (metrics.instructionsCount);
+        instanceMetrics.setMethodInvocationCount (metrics.methodInvocationCount);
+        instanceMetrics.setArrayAllocationCount (metrics.arrayAllocationCount);
+        instanceMetrics.setObjectAllocationCount (metrics.objectAllocationCount);
+        // write on metrics on dynamo
+        DynamoDB.getInstance ().writeValues (instanceMetrics);
+
         // remove metrics created by the thread
         metricsHashMap.remove (threadId);
     }
@@ -145,16 +154,16 @@ public class Instrumentation {
 
         public long instructionsCount = 0;
         public long methodInvocationCount = 0;
-        public long objectCreationCount = 0;
-        public long newArrayCount = 0;
+        public long objectAllocationCount = 0;
+        public long arrayAllocationCount = 0;
         public DateTime init = new DateTime ();
 
         @Override public String toString () {
             return "Metrics: \n" +
                     "\tinstructionsCount:       " + instructionsCount + "\n" +
                     "\tmethodInvocationCount:   " + methodInvocationCount + "\n" +
-                    "\tobjectCreationCount:     " + objectCreationCount + "\n" +
-                    "\tnewArrayCount:           " + newArrayCount + "\n";
+                    "\tobjectCreationCount:     " + objectAllocationCount + "\n" +
+                    "\tnewArrayCount:           " + arrayAllocationCount + "\n";
         }
     }
 

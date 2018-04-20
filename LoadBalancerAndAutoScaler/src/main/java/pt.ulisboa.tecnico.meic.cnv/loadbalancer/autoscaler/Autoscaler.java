@@ -8,7 +8,6 @@ import pt.ulisboa.tecnico.meic.cnv.loadbalancer.InstanceInfo;
 
 import java.util.*;
 
-import static com.sun.org.apache.xml.internal.security.keys.keyresolver.KeyResolver.iterator;
 
 public class Autoscaler implements Runnable {
 
@@ -25,25 +24,7 @@ public class Autoscaler implements Runnable {
         }
     }
 
-    public void addEC2Instance() {
-        Instance instance = null;
-        try {
-            instance = Autoscaler.addEC2Instance(context.getEc2(), context.getEc2WebServerImage(),
-                    context.getEc2WebServerKeyPairName(), context.getEc2WebServerSecurityGroup(),
-                    context.getEc2WebServerInstanceType());
-            //Now that we know that the instance is running we make it available to the load balancer
-            InstanceInfo instanceInfo = new InstanceInfo();
-            instanceInfo.id = instance.getInstanceId();
-            instanceInfo.hostIp = instance.getPublicIpAddress() + ":8000";
 
-            synchronized (context.getInstanceList()) {
-                context.getInstanceList().add(instanceInfo);
-            }
-
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
 
 
     @Override
@@ -59,6 +40,9 @@ public class Autoscaler implements Runnable {
 
                 //todo - check metrics
                 //todo - make decisions
+
+                //queueInstanceRemoval()
+
                 //If the global load can be distributed to fewer machines, the autoscaler should remove one machine.
                 //If the load is too much for the instances, a new should be made
                 //There should be a concern for the number of min/max instances
@@ -86,34 +70,47 @@ public class Autoscaler implements Runnable {
         }
     }
 
-    public void queueInstanceRemoval() {
+    public void addEC2Instance() {
+        try {
+            Instance instance = Autoscaler.addEC2Instance(context.getEc2(), context.getEc2WebServerImage(),
+                    context.getEc2WebServerKeyPairName(), context.getEc2WebServerSecurityGroup(),
+                    context.getEc2WebServerInstanceType());
+            //Now that we know that the instance is running we make it available to the load balancer
+            InstanceInfo instanceInfo = new InstanceInfo();
+            instanceInfo.id = instance.getInstanceId();
+            instanceInfo.hostIp = instance.getPublicIpAddress() + ":8000";
 
-        //todo - test if we can remove the instance instances > minInstances
+            synchronized (context.getInstanceList()) {
+                context.getInstanceList().add(instanceInfo);
+            }
 
-        //todo - find one instance to be removed, not sure if we take the metrics into account
-        // (probably not because the load balancer will not redirect any more requests to the instance making its
-        // resource usage eventually 0)
-        //todo - queue the deletion
-        //todo - wait for the instance to be cleared.
-
-
-        List<InstanceInfo> instanceInfoList = context.getInstanceList();
-        Random random = new Random();
-        int removeIndex = random.nextInt(instanceInfoList.size() + 1);
-
-        synchronized (instanceInfoList) {
-            instanceInfoList.get(removeIndex).queueRemove = true;
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-
     }
 
-    //Image: don't know yet
-    //KeyPairName: ec2InstanceKeyPair
-    //Security group: launch-wizard-2
-    //Instance Type: t2.micro
+    public void queueInstanceRemoval() {
+        synchronized (context.getInstanceList()) {
+            int availableCount = 0;
+            List<InstanceInfo> instanceInfoList = context.getInstanceList();
+            for(InstanceInfo instanceInfo: instanceInfoList) {
+                if(!instanceInfo.queueRemove) {
+                    availableCount ++;
+                }
+            }
+
+            if(availableCount > minInstances) {
+                //We can choose a random instance because the load balancer will not redirect any more requests to the
+                // instance, making its resource usage eventually 0, without disrupting its previously assign requests.
+                Random random = new Random();
+                int removeIndex = random.nextInt(instanceInfoList.size() + 1);
+                instanceInfoList.get(removeIndex).queueRemove = true;
+            }
+        }
+    }
+
+
     public static Instance addEC2Instance(AmazonEC2 ec2, String image, String keyPairName, String securityGroup, String instanceType) throws InterruptedException {
-        //How to get the availability zone for paris
-        //DescribeAvailabilityZonesResult availabilityZonesResult = ec2.describeAvailabilityZones();
 
         RunInstancesRequest runInstancesRequest =
                 new RunInstancesRequest();
@@ -139,6 +136,8 @@ public class Autoscaler implements Runnable {
 
         //TODO - Test the instance's health by sending a ping.
 
+        System.out.println ("Waiting for instance " + newInstanceId + "  to be available...");
+
         //While true :/
         while(true) {
             Thread.sleep(2000);
@@ -153,6 +152,7 @@ public class Autoscaler implements Runnable {
                     //if our instance is running
                     if(instance.getInstanceId().equals(newInstanceId) &&
                             instance.getState().getName().equals("running")) { //not sure if it is done this way
+                        System.out.println ("Instance " + instance.getInstanceId () + " is now running...");
                         return instance;
                     }
                 }

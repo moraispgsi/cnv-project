@@ -51,7 +51,6 @@ new Thread(new Runnable() {
             return mapper.scan(TableMetrics.class, scanExpression);
 
         } catch(Exception exception) {
-            System.out.println ("falhei aqui");
             exception.printStackTrace ();
         }
         return null;

@@ -33,6 +33,8 @@ subprojects {
                 session(remotes.webServer) {
                     put from: 'build/distributions/' + project.name + '.zip', into: '/home/ec2-user/'
                     execute 'unzip -o /home/ec2-user/' + project.name + '.zip && rm /home/ec2-user/' + project.name + '.zip'
+                    execute 'mkdir -p /home/ec2-user/.aws/'
+                    put from: '../keypairs/credentials', into: '/home/ec2-user/.aws/'
                 }
             }
         }

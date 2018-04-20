@@ -13,7 +13,6 @@ import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.InvalidMazeRunning
 
 import java.io.*;
 import java.net.InetSocketAddress;
-import java.net.URL;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,8 +23,8 @@ public class WebServer {
 
     public static final int PORT = 8000;
 
-    static final String MAZE_DIR = "src/main/resources/mazes/";
-    static final String RESULT_DIR = "src/main/resources/results/";
+    static final String MAZE_DIR = "../resources/mazes/";
+    static final String RESULT_DIR = "../resources/results/";
 
 
     public static void main (String[] args) throws Exception {
@@ -43,11 +42,11 @@ public class WebServer {
             long threadId = Thread.currentThread ().getId ();
             Map<String, String> params = queryToMap (t.getRequestURI ().getQuery ());
 
-            String responseFileName = RESULT_DIR.toString () + params.hashCode () + ".html";
+            String responseFileName = RESULT_DIR + params.hashCode () + ".html";
 
             String[] solverParams =
                     new String[] { params.get ("x0"), params.get ("y0"), params.get ("x1"), params.get ("y1"),
-                            params.get ("v"), params.get ("s"), MAZE_DIR.toString () + params.get ("m"), responseFileName };
+                            params.get ("v"), params.get ("s"), MAZE_DIR + params.get ("m"), responseFileName };
 
             try {
                 // generate key

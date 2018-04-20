@@ -40,20 +40,6 @@ subprojects {
 
 }
 
-/*
-project(':AutoScaler') {
-    mainClassName = 'pt.ulisboa.tecnico.meic.cnv.loadbalancer.autoscaler.AutoScaler'
-
-    //Deploy to AWS
-    remotes {
-        webServer {
-            host = 'ec2-35-180-33-92.eu-west-3.compute.amazonaws.com'
-            user = 'ec2-user'
-            identity = file("../keypairs/loadbalancerAndAutoScalerKeypair.pem") //pem file on HOME DIR, or change me
-        }
-    }
-}
-*/
 
 project(':LoadBalancerAndAutoScaler') {
     mainClassName = 'pt.ulisboa.tecnico.meic.cnv.loadbalancer.WebServer'
@@ -67,20 +53,7 @@ project(':LoadBalancerAndAutoScaler') {
         }
     }
 }
-/*
-project(':LoadBalancer') {
-    mainClassName = 'pt.ulisboa.tecnico.meic.cnv.loadbalancer.WebServer'
 
-    //Deploy to AWS
-    remotes {
-        webServer {
-            host = 'ec2-35-180-33-92.eu-west-3.compute.amazonaws.com'
-            user = 'ec2-user'
-            identity = file("../keypairs/loadbalancerAndAutoScalerKeypair.pem") //pem file on HOME DIR, or change me
-        }
-    }
-}
-*/
 
 project(':server') {
     mainClassName = 'pt.ulisboa.tecnico.meic.cnv.WebServer'
@@ -91,34 +64,6 @@ project(':server') {
         compile project(":LoadBalancerAndAutoScaler")
     }
 
-
-    run {
-        dependsOn(':inst:run')
-
-        doFirst {
-            //use classpath with .class instead of .jar
-
-            def cp = []
-
-            cp.add(sourceSets.main.output.classesDir)
-            cp.add(sourceSets.main.output.resourcesDir)
-            configurations.runtime.getAllDependencies().each { dep ->
-                if (dep instanceof ProjectDependency) {
-                    def depProj = dep.getDependencyProject()
-                    def proj = project(depProj.path)
-                    cp.add(proj.sourceSets.main.output.classesDir)
-                    cp.add(proj.sourceSets.main.output.resourcesDir)
-                }
-                else
-                    project.configurations.runtime.files(dep).each { file ->
-                        cp.add(file)
-                    }
-            }
-            classpath = files(cp)
-
-        }
-
-    }
 
     //Deploy to AWS
     remotes {
@@ -146,12 +91,6 @@ project(':MazeRunner') {
 
 project('inst') {
     mainClassName = 'Instrumentation'
-
-    //pt.ulisboa.tecnico.meic.cnv.instrument.
-    dependencies {
-        runtime project(':MazeRunner')
-        compile project(":LoadBalancerAndAutoScaler")
-    }
 
 
     //Instrumenting MazeRunner classes

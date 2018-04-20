@@ -42,7 +42,7 @@ subprojects {
 
 /*
 project(':AutoScaler') {
-    mainClassName = 'pt.ulisboa.tecnico.meic.cnv.autoscaler.AutoScaler'
+    mainClassName = 'pt.ulisboa.tecnico.meic.cnv.loadbalancer.autoscaler.AutoScaler'
 
     //Deploy to AWS
     remotes {

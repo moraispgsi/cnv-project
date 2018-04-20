@@ -8,6 +8,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import pt.ulisboa.tecnico.meic.cnv.loadbalancer.autoscaler.Autoscaler;
 
 
 import java.io.BufferedReader;
@@ -23,11 +24,22 @@ import java.util.concurrent.Executors;
 
 public class WebServer {
     private static final int PORT = 8000;
-    private static List<Instance> instances = new ArrayList<> ();
+
+    private static Context context;
+    private static Autoscaler autoscaler;
+    private static Thread threadAutoscaler;
 
     public static void main(String[] args) throws Exception {
-        // Autoscaler -> inicia uma instância baseada numa imagem!!!
-        // autoscaler.initMachines(1);  // algo do genero
+
+        context = new Context("", "ec2InstanceKeyPair",
+                "launch-wizard-2", "t2.micro");
+
+        System.out.println ("Starting the autoscaler...");
+        autoscaler = new Autoscaler(context); //The constructor prepares a min number of instances and blocks until they are running
+        //start autoscaler
+        threadAutoscaler = new Thread(autoscaler);
+        threadAutoscaler.start();
+
         System.out.println ("Init load balancer web server...");
         HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
         server.createContext("/mzrun.html", new MyHandler());
@@ -41,14 +53,23 @@ public class WebServer {
         @Override
         public void handle(HttpExchange t) throws IOException {
 
+            String serverURL;
+            int index;
+            synchronized (context.getInstanceList()) {
+                //Todo - use the list to find out which is instance is more available that is NOT queued for removal
 
-            //TODO Choose an available EC2 webserver
-            //This includes connecting to the DynamoDB database and checking the metrics
-            //this should not take too much time because if it does it will slow down the service
-            //instead of augmenting the performance
+                //This includes connecting to the DynamoDB database and checking the metrics
+                //this should not take too much time because if it does it will slow down the service
+                //instead of augmenting the performance
 
-            // change the url for one of the machines
-            String serverURL = "google.pt";
+                //TODO - Change this to the index of the more available instance
+                index = 0;
+                InstanceInfo instanceInfo = context.getInstanceList().get(index);
+                instanceInfo.requestPending ++;
+                serverURL = instanceInfo.hostIp;
+
+                //todo - if no instance is available the response should be an error
+            }
 
             //Forward request
             URL requestURL = new URL("http://" + serverURL + "/mzrun.html"+t.getRequestURI().getQuery());
@@ -67,6 +88,12 @@ public class WebServer {
             OutputStream os = t.getResponseBody();
             os.write(inputLine.getBytes(),0,inputLine.getBytes().length);
             os.close();
+
+            //The request was fulfilled
+            synchronized (context.getInstanceList()) {
+                InstanceInfo instanceInfo = context.getInstanceList().get(index);
+                instanceInfo.requestPending --;
+            }
 
         }
 

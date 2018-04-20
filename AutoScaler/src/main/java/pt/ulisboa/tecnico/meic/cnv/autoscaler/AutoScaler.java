@@ -1,4 +1,4 @@
-package pt.ulisboa.tecnico.meic.cnv.autoscaler;
+package pt.ulisboa.tecnico.meic.cnv.loadbalancer.autoscaler;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;

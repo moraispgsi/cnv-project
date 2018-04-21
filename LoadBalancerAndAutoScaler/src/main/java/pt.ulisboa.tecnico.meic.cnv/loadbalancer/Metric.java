@@ -7,6 +7,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 
 @DynamoDBTable (tableName = "metrics") public class Metric {
 
+    private double MATCH_DISTANCE_RANGE = 10;
+
     private String key;
     private boolean completed;
     private long threadId;
@@ -159,6 +161,42 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
     public void setArrayAllocationCount (long arrayAllocationCount) {
         this.arrayAllocationCount = arrayAllocationCount;
     }
+
+    public long computeComplexity() {
+        return this.instructionsCount + this.methodInvocationCount + this.objectAllocationCount;
+    }
+
+    //Compares the metric with the requestInfo input data to see if it has significant similarities
+    public boolean match(RequestInfo requestInfo) {
+
+        //ignoring different mazes
+        if(!requestInfo.maze.equals(this.maze)) {
+            return false;
+        }
+        //ignoring different strategies
+        if(!requestInfo.strategy.equals(this.strategy)) {
+            return false;
+        }
+
+        double distance = RequestInfo.getDistance(initX, initY, finalX, finalY);
+        //ignoring distances with a difference of more than MATCH_DISTANCE_RANGE
+        if(!(Math.abs(distance - requestInfo.getDistance()) > MATCH_DISTANCE_RANGE)) {
+            return false;
+        }
+
+        //Significant similarities
+        return true;
+    }
+
+    //Returns the ratio between the estimate and the real complexity
+    public double getRatio() {
+        int estimate = RequestInfo.computeEstimatedComplexity(
+                RequestInfo.getSize(maze), RequestInfo.getDistance(initX, initY, finalX, finalY), velocity);
+        long complexity = this.computeComplexity();
+
+        return estimate / complexity;
+    }
+
 
     @Override public String toString () {
         return "Metric{" + "key='" + key + '\'' + ", completed=" + completed + ", threadId=" + threadId +

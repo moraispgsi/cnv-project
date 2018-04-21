@@ -66,18 +66,40 @@ public class WebServer {
                 String strategy = params.get ("s"); //Strategy
                 String maze = params.get ("m"); //Maze
 
+                RequestInfo currentRequestInfo = new RequestInfo();
+                currentRequestInfo.initX = initX;
+                currentRequestInfo.initY = initY;
+                currentRequestInfo.finalX = finalX;
+                currentRequestInfo.finalY = finalY;
+                currentRequestInfo.maze = maze;
+                currentRequestInfo.velocity = velocity;
+                currentRequestInfo.strategy = strategy;
 
-                int estimatedComplexity = 5000;
                 List<Metric> metrics = DynamoDB.getInstance().getMetrics();
-                //TODO - calculate the complexity for the request
+                List<Metric> matches = new ArrayList<>();
+                for(Metric metric : metrics) {
+                    if(metric.match(currentRequestInfo)) {
+                        matches.add(metric);
+                    }
+                }
 
+                System.out.println("Metrics " + metrics.size());
 
+                System.out.println("Matches " + matches.size());
 
+                if(matches.size() != 0) {
+                    double sum = 0;
+                    for(Metric metric : matches) {
+                        double ratio = metric.getRatio();
+                        sum += ratio;
+                    }
+                    double averageRatio = sum / matches.size();
+                    currentRequestInfo.estimatedComplexity = (int)(currentRequestInfo.computeEstimatedComplexity() * averageRatio);
+                } else {
+                    //default calculation
+                    currentRequestInfo.estimatedComplexity = currentRequestInfo.computeEstimatedComplexity();
+                }
 
-
-
-
-                RequestInfo currentRequestInfo;
                 InstanceInfo instanceInfoLessComplexity = null;
                 int currentComplexity = 0;
                 String serverURL;
@@ -109,15 +131,6 @@ public class WebServer {
                     System.out.println (instanceInfoLessComplexity);
 
                     //Adding the current request information to the list of current requests of the instance.
-                    currentRequestInfo = new RequestInfo();
-                    currentRequestInfo.initX = initX;
-                    currentRequestInfo.initY = initY;
-                    currentRequestInfo.finalX = finalX;
-                    currentRequestInfo.finalY = finalY;
-                    currentRequestInfo.maze = maze;
-                    currentRequestInfo.velocity = velocity;
-                    currentRequestInfo.strategy = strategy;
-                    currentRequestInfo.estimatedComplexity = estimatedComplexity;
                     instanceInfoLessComplexity.currentRequests.add(currentRequestInfo);
                 }
 

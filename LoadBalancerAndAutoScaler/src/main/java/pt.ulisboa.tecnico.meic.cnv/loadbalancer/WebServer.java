@@ -97,10 +97,7 @@ public class WebServer {
                     }
 
                     for(InstanceInfo instanceInfo : availableInstanceInfoList) {
-                        int sum = 0;
-                        for(RequestInfo requestInfo: instanceInfo.currentRequests) {
-                            sum += requestInfo.estimatedComplexity;
-                        }
+                        int sum = instanceInfo.getComplexity();
                         if(instanceInfoLessComplexity == null || currentComplexity > sum) {
                             instanceInfoLessComplexity = instanceInfo;
                             currentComplexity = sum;

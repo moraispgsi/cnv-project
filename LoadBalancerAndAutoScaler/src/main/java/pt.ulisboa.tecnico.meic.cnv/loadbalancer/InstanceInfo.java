@@ -12,6 +12,14 @@ public class InstanceInfo {
     public List<RequestInfo> currentRequests = new ArrayList<> ();
 
 
+    public int getComplexity() {
+        int sum = 0;
+        for(RequestInfo requestInfo: this.currentRequests) {
+            sum += requestInfo.estimatedComplexity;
+        }
+        return sum;
+    }
+
     @Override public String toString () {
         return "InstanceInfo{" + "id='" + id + '\'' + ", hostIp='" + hostIp + '\'' + ", queueRemove=" + queueRemove +
                 ", requestPending=" + requestPending + '}';

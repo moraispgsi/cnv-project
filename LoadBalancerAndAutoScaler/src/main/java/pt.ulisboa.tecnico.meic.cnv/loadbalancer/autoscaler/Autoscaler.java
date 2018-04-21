@@ -11,6 +11,10 @@ import java.util.*;
 
 public class Autoscaler implements Runnable {
 
+    //TODO - adjust the values
+    private final int MIN_LOAD_COMPLEXITY = 100;
+    private final int MAX_LOAD_COMPLEXITY = 4000;
+
     private int minInstances =  1;
     private int maxInstance = 3;
     private Context context;
@@ -24,9 +28,6 @@ public class Autoscaler implements Runnable {
         }
     }
 
-
-
-
     @Override
     public void run() {
 
@@ -34,22 +35,35 @@ public class Autoscaler implements Runnable {
             try {
                 Thread.sleep(2000);
 
-                //------
-                // Add necessary things that need to run in the thread
-                //------
+                synchronized (context.getInstanceList()) {
+                    List<InstanceInfo> availableInstanceInfoList = new ArrayList<>();
 
-                //todo - check metrics
-                //todo - make decisions
+                    //Filter available instances
+                    for(InstanceInfo instanceInfo : context.getInstanceList()) {
+                        if(!instanceInfo.queueRemove) {
+                            availableInstanceInfoList.add(instanceInfo);
+                        }
+                    }
 
-                //queueInstanceRemoval()
+                    int clusterSize = availableInstanceInfoList.size();
+                    int clusterComplexity = 0;
 
-                //If the global load can be distributed to fewer machines, the autoscaler should remove one machine.
-                //If the load is too much for the instances, a new should be made
-                //There should be a concern for the number of min/max instances
-                //------
+                    for(InstanceInfo instanceInfo : availableInstanceInfoList) {
+                        clusterComplexity += instanceInfo.getComplexity();
+                    }
 
-                //This should be running in the background, the autoscaler should be looking for instances that
-                //are ready to be deleted.
+                    //Decision
+                    if(clusterSize > 1 && clusterSize * MIN_LOAD_COMPLEXITY > clusterComplexity) {
+                        //The cluster has too much nodes for its load
+                        queueInstanceRemoval();
+                    } else if(clusterSize > 1 && clusterSize * MAX_LOAD_COMPLEXITY < clusterComplexity) {
+                        //The cluster has too much load for its nodes
+                        //TODO - check how many we have to create
+                        addEC2Instance();
+                    }
+
+                }
+
                 synchronized (context.getInstanceList()) {
                     List<InstanceInfo> instanceInfoList = context.getInstanceList();
                     Iterator<InstanceInfo> iterator = instanceInfoList.iterator();
@@ -166,6 +180,5 @@ public class Autoscaler implements Runnable {
         termInstanceReq.withInstanceIds(instanceId);
         ec2.terminateInstances(termInstanceReq);
     }
-
 
 }

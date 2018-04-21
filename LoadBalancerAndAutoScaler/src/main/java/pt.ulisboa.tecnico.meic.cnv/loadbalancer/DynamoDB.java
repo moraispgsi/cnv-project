@@ -23,23 +23,8 @@ public final class DynamoDB {
             instance.dynamoDB = AmazonDynamoDBClientBuilder.standard()
                     .withRegion(Regions.EU_WEST_3)
                     .build();
-            //instance.dynamoDB.createTables();
         }
         return instance;
-    }
-/*
-criar uma nova thread para guardar, apagar, ...
-new Thread(new Runnable() {
-         @Override
-         public void run() {
-             dynamoDBMapper.save(newsItem);
-                 // Item saved
-         }
-     }).start();
- */
-    // todo
-    private void createTables() {
-
     }
 
     public List<Metric> getMetrics () {
@@ -54,8 +39,8 @@ new Thread(new Runnable() {
         return null;
     }
 
-    public void writeValues (final Metric instance) {
-        final DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
+    public void writeValues (Metric instance) {
+        DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
         try {
             mapper.save(instance);
 

@@ -189,7 +189,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
     }
 
     //Returns the ratio between the estimate and the real complexity
-    public double getRatio() {
+    public double calculateRatio () {
         int estimate = RequestInfo.computeEstimatedComplexity(
                 RequestInfo.getSize(maze), RequestInfo.getDistance(initX, initY, finalX, finalY), velocity);
         long complexity = this.computeComplexity();

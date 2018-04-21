@@ -1,10 +1,5 @@
 package pt.ulisboa.tecnico.meic.cnv.loadbalancer;
 
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -33,7 +28,7 @@ public class WebServer {
 
     public static void main(String[] args) throws Exception {
 
-        context = new Context("ami-7edd6c03", "ec2InstanceKeyPair",
+        context = new Context("ami-e8dc6d95", "ec2InstanceKeyPair",
                 "launch-wizard-2", "t2.micro");
 
         System.out.println ("Starting the autoscaler...");
@@ -90,7 +85,7 @@ public class WebServer {
                 if(matches.size() != 0) {
                     double sum = 0;
                     for(Metric metric : matches) {
-                        double ratio = metric.getRatio();
+                        double ratio = metric.calculateRatio ();
                         sum += ratio;
                     }
                     double averageRatio = sum / matches.size();

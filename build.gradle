@@ -70,7 +70,7 @@ project(':server') {
     //Deploy to AWS
     remotes {
         webServer {
-            host = 'ec2-52-47-93-150.eu-west-3.compute.amazonaws.com'
+            host = 'ec2-35-180-6-2.eu-west-3.compute.amazonaws.com'
             user = 'ec2-user'
             identity = file("../keypairs/ec2InstanceKeyPair.pem") //pem file on HOME DIR, or change me
         }

@@ -31,10 +31,23 @@ public class WebServer {
         System.out.println ("Init web server...");
         HttpServer server = HttpServer.create (new InetSocketAddress (PORT), 0);
         server.createContext ("/mzrun.html", new MyHandler ());
+        server.createContext ("/healthCheck", new HealthCheckHandler ());
         server.setExecutor (Executors.newCachedThreadPool ()); // creates a non-limited Executor
         server.start ();
-        System.out.println ("Web server listening on port " + PORT);
+        System.out.println ("Maze Web server listening on port " + PORT);
     }
+
+    static class HealthCheckHandler implements HttpHandler {
+
+        @Override public void handle (HttpExchange t) throws IOException {
+            String response = "alive";
+            t.sendResponseHeaders (200, response.length ());
+            OutputStream os = t.getResponseBody ();
+            os.write (response.getBytes ());
+            os.close ();
+        }
+    }
+
 
     static class MyHandler implements HttpHandler {
 
@@ -52,10 +65,11 @@ public class WebServer {
                 // generate key
                 String key = new Date ().toString () + "-" + threadId;
                 // save request input data on dynamo
-                DynamoDB.getInstance ().writeValues (new Metric(key, false, threadId, Integer.parseInt (params.get ("x0")),
-                        Integer.parseInt (params.get ("y0")), Integer.parseInt (params.get ("x1")),
-                        Integer.parseInt (params.get ("y1")), params.get ("m"), params.get ("s"),
-                        Integer.parseInt (params.get ("v"))));
+                DynamoDB.getInstance ()
+                        .writeValues (new Metric (key, false, threadId, Integer.parseInt (params.get ("x0")),
+                                Integer.parseInt (params.get ("y0")), Integer.parseInt (params.get ("x1")),
+                                Integer.parseInt (params.get ("y1")), params.get ("m"), params.get ("s"),
+                                Integer.parseInt (params.get ("v"))));
 
                 System.out.println (
                         "Thread with id: '" + threadId + "' > Trying to solve: " + t.getRequestURI ().getQuery ());
@@ -63,8 +77,7 @@ public class WebServer {
                 Main.main (solverParams);
                 System.out.println ("Thread with id: '" + threadId + "' > Response at: " + responseFileName);
 
-            } catch (InvalidMazeRunningStrategyException | CantReadMazeInputFileException | CantGenerateOutputFileException |
-                    InvalidCoordinatesException | NumberFormatException e) {
+            } catch (InvalidMazeRunningStrategyException | CantReadMazeInputFileException | CantGenerateOutputFileException | InvalidCoordinatesException | NumberFormatException e) {
                 e.printStackTrace ();
                 // delete record pre created by the thread, because the request wasn't finished
                 DynamoDB.getInstance ().deleteIncompleteMetricByThreadId (threadId);

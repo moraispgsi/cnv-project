@@ -19,7 +19,9 @@ import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 
 public class WebServer {
@@ -54,26 +56,72 @@ public class WebServer {
         public void handle(HttpExchange t) throws IOException {
             try {
 
+                Map<String, String> params = queryToMap (t.getRequestURI ().getQuery ());
+
+                int initX = Integer.parseInt (params.get ("x0")); //Point A
+                int initY = Integer.parseInt (params.get ("y0")); //Point A
+                int finalX = Integer.parseInt (params.get ("x1")); //Point B
+                int finalY = Integer.parseInt (params.get ("y1")); //Point B
+                int velocity = Integer.parseInt (params.get ("v")); //Velocity
+                String strategy = params.get ("s"); //Strategy
+                String maze = params.get ("m"); //Maze
+
+
+                int estimatedComplexity = 5000;
+                List<Metric> metrics = DynamoDB.getInstance().getMetrics();
+                //TODO - calculate the complexity for the request
+
+
+
+
+
+
+
+                RequestInfo currentRequestInfo;
+                InstanceInfo instanceInfoLessComplexity = null;
+                int currentComplexity = 0;
                 String serverURL;
-                int index;
                 synchronized (context.getInstanceList()) {
 
+                    List<InstanceInfo> availableInstanceInfoList = new ArrayList<>();
 
+                    //Filter available instances
+                    for(InstanceInfo instanceInfo : context.getInstanceList()) {
+                        if(!instanceInfo.queueRemove) {
+                            availableInstanceInfoList.add(instanceInfo);
+                        }
+                    }
 
-                    //Todo - use the list to find out which is instance is more available that is NOT queued for removal
+                    if(availableInstanceInfoList.size() == 0) {
+                        throw new RuntimeException("No instance available to redirect the request to.");
+                    }
 
-                    //This includes connecting to the DynamoDB database and checking the metrics
-                    //this should not take too much time because if it does it will slow down the service
-                    //instead of augmenting the performance
+                    for(InstanceInfo instanceInfo : availableInstanceInfoList) {
+                        int sum = 0;
+                        for(RequestInfo requestInfo: instanceInfo.currentRequests) {
+                            sum += requestInfo.estimatedComplexity;
+                        }
+                        if(instanceInfoLessComplexity == null || currentComplexity > sum) {
+                            instanceInfoLessComplexity = instanceInfo;
+                            currentComplexity = sum;
+                        }
+                    }
 
-                    //TODO - Change this to the index of the more available instance
-                    index = 0;
-                    InstanceInfo instanceInfo = context.getInstanceList().get(index);
-                    instanceInfo.requestPending ++;
-                    serverURL = instanceInfo.hostIp;
-                    System.out.println (instanceInfo);
+                    instanceInfoLessComplexity.requestPending ++;
+                    serverURL = instanceInfoLessComplexity.hostIp;
+                    System.out.println (instanceInfoLessComplexity);
 
-                    //todo - if no instance is available the response should be an error
+                    //Adding the current request information to the list of current requests of the instance.
+                    currentRequestInfo = new RequestInfo();
+                    currentRequestInfo.initX = initX;
+                    currentRequestInfo.initY = initY;
+                    currentRequestInfo.finalX = finalX;
+                    currentRequestInfo.finalY = finalY;
+                    currentRequestInfo.maze = maze;
+                    currentRequestInfo.velocity = velocity;
+                    currentRequestInfo.strategy = strategy;
+                    currentRequestInfo.estimatedComplexity = estimatedComplexity;
+                    instanceInfoLessComplexity.currentRequests.add(currentRequestInfo);
                 }
 
                 //Forward request
@@ -98,12 +146,25 @@ public class WebServer {
 
                 //The request was fulfilled
                 synchronized (context.getInstanceList()) {
-                    InstanceInfo instanceInfo = context.getInstanceList().get(index);
-                    instanceInfo.requestPending --;
+                    instanceInfoLessComplexity.requestPending --;
+                    instanceInfoLessComplexity.currentRequests.remove(currentRequestInfo);
                 }
             }catch(Exception e) {
                 e.printStackTrace ();
             }
+        }
+
+        private Map<String, String> queryToMap (String query) {
+            Map<String, String> result = new HashMap<String, String>();
+            for (String param : query.split ("&")) {
+                String pair[] = param.split ("=");
+                if (pair.length > 1) {
+                    result.put (pair[0], pair[1]);
+                } else {
+                    result.put (pair[0], "");
+                }
+            }
+            return result;
         }
 
     }

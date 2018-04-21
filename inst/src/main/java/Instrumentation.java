@@ -4,7 +4,7 @@ import org.joda.time.Period;
 import org.joda.time.format.PeriodFormatter;
 import org.joda.time.format.PeriodFormatterBuilder;
 import pt.ulisboa.tecnico.meic.cnv.loadbalancer.DynamoDB;
-import pt.ulisboa.tecnico.meic.cnv.loadbalancer.TableMetrics;
+import pt.ulisboa.tecnico.meic.cnv.loadbalancer.Metric;
 
 
 import java.io.File;
@@ -137,7 +137,7 @@ public class Instrumentation {
         System.out.println ("Thread " + threadId + "recovered the following metrics: \n" + metrics);
         System.out.println ("Took: " + elapsed);
         // append metrics to the input request data
-        TableMetrics instanceMetrics = DynamoDB.getInstance ().getIncompleteMetricByThreadId (threadId);
+        Metric instanceMetrics = DynamoDB.getInstance ().getIncompleteMetricByThreadId (threadId);
         instanceMetrics.setCompleted (true);
         instanceMetrics.setInstructionsCount (metrics.instructionsCount);
         instanceMetrics.setMethodInvocationCount (metrics.methodInvocationCount);

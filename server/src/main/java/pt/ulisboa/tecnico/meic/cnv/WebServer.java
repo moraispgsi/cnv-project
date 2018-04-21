@@ -4,7 +4,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import pt.ulisboa.tecnico.meic.cnv.loadbalancer.DynamoDB;
-import pt.ulisboa.tecnico.meic.cnv.loadbalancer.TableMetrics;
+import pt.ulisboa.tecnico.meic.cnv.loadbalancer.Metric;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.Main;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.CantGenerateOutputFileException;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.CantReadMazeInputFileException;
@@ -51,7 +51,7 @@ public class WebServer {
                 // generate key
                 String key = new Date ().toString () + "-" + threadId;
                 // save request input data on dynamo
-                DynamoDB.getInstance ().writeValues (new TableMetrics (key, false, threadId, Integer.parseInt (params.get ("x0")),
+                DynamoDB.getInstance ().writeValues (new Metric(key, false, threadId, Integer.parseInt (params.get ("x0")),
                         Integer.parseInt (params.get ("y0")), Integer.parseInt (params.get ("x1")),
                         Integer.parseInt (params.get ("y1")), params.get ("m"), params.get ("s"),
                         Integer.parseInt (params.get ("v"))));

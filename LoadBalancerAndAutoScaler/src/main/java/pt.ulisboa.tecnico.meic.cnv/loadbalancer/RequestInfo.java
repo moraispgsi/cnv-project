@@ -7,6 +7,7 @@ public class RequestInfo {
     public int finalX;
     public int finalY;
     public int velocity;
+    public String strategy;
     public String maze;
 
     public int estimatedComplexity;

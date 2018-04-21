@@ -7,8 +7,6 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 
-import javax.xml.bind.SchemaOutputResolver;
-import java.util.ArrayList;
 import java.util.List;
 
 
@@ -44,11 +42,11 @@ new Thread(new Runnable() {
 
     }
 
-    public List<TableMetrics> getListValues () {
+    public List<Metric> getMetrics () {
         DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
         DynamoDBScanExpression scanExpression = new DynamoDBScanExpression();
         try{
-            return mapper.scan(TableMetrics.class, scanExpression);
+            return mapper.scan(Metric.class, scanExpression);
 
         } catch(Exception exception) {
             exception.printStackTrace ();
@@ -56,7 +54,7 @@ new Thread(new Runnable() {
         return null;
     }
 
-    public void writeValues (final TableMetrics instance) {
+    public void writeValues (final Metric instance) {
         final DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
         try {
             mapper.save(instance);
@@ -67,10 +65,10 @@ new Thread(new Runnable() {
         }
     }
 
-    public TableMetrics getIncompleteMetricByThreadId (long threadId) {
-        List<TableMetrics> metrics = getListValues ();
+    public Metric getIncompleteMetricByThreadId (long threadId) {
+        List<Metric> metrics = getMetrics();
         if (metrics != null) {
-            for (TableMetrics metric : metrics) {
+            for (Metric metric : metrics) {
                 if (metric.getThreadId () == threadId && !metric.getCompleted ()) {
                     System.out.println ("Metric found: " + metric);
                     return metric;
@@ -82,7 +80,7 @@ new Thread(new Runnable() {
 
     public void deleteIncompleteMetricByThreadId (long threadId) {
         DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
-        TableMetrics metric = getIncompleteMetricByThreadId (threadId);
+        Metric metric = getIncompleteMetricByThreadId (threadId);
         try {
             mapper.delete (metric);
 

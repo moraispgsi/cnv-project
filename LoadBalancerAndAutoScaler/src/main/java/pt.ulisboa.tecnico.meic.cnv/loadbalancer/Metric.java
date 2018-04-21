@@ -5,7 +5,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 
 
-@DynamoDBTable (tableName = "metrics") public class TableMetrics {
+@DynamoDBTable (tableName = "metrics") public class Metric {
 
     private String key;
     private boolean completed;
@@ -26,12 +26,12 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 
 
     // necessary for the mapper scan
-    public TableMetrics () {
+    public Metric() {
 
     }
 
-    public TableMetrics (String key, boolean completed, long threadId, int initX, int initY, int finalX, int finalY,
-                         String maze, String strategy, int velocity) {
+    public Metric(String key, boolean completed, long threadId, int initX, int initY, int finalX, int finalY,
+                  String maze, String strategy, int velocity) {
         this.key = key;
         this.completed = completed;
         this.threadId = threadId;
@@ -161,7 +161,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
     }
 
     @Override public String toString () {
-        return "TableMetrics{" + "key='" + key + '\'' + ", completed=" + completed + ", threadId=" + threadId +
+        return "Metric{" + "key='" + key + '\'' + ", completed=" + completed + ", threadId=" + threadId +
                 ", initX=" + initX + ", initY=" + initY + ", finalX=" + finalX + ", finalY=" + finalY + ", maze='" +
                 maze + '\'' + ", strategy='" + strategy + '\'' + ", velocity=" + velocity + ", instructionsCount=" +
                 instructionsCount + ", methodInvocationCount=" + methodInvocationCount + ", objectAllocationCount=" +

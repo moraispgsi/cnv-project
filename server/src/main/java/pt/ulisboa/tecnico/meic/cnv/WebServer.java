@@ -23,8 +23,9 @@ public class WebServer {
 
     public static final int PORT = 8000;
 
-    static final String MAZE_DIR = "src/main/resources/mazes/";
-    static final String RESULT_DIR = "src/main/resources/results/";
+    static final String MAZE_DIR = "../resources/mazes/";
+    static final String RESULT_DIR = "../resources/results/";
+
 
     public static void main (String[] args) throws Exception {
         System.out.println ("Init web server...");

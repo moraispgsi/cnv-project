@@ -70,7 +70,6 @@ new Thread(new Runnable() {
         if (metrics != null) {
             for (Metric metric : metrics) {
                 if (metric.getThreadId () == threadId && !metric.getCompleted ()) {
-                    System.out.println ("Metric found: " + metric);
                     return metric;
                 }
             }

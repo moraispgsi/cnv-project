@@ -119,9 +119,9 @@ public class InstanceInfo {
 
                 removalThread = new Thread(){
                     public void run(){
-                        System.out.println("Scheduling id " + awsInstance.getInstanceId() + " is running. Sleeping 10 seconds...");
+                        System.out.println("Scheduling id " + awsInstance.getInstanceId() + " is running. Sleeping 30 seconds...");
                         try {
-                            Thread.sleep(10000); //TODO
+                            Thread.sleep(30000); //TODO
                             synchronized (AutoScaler.getToBeDeletedList()) {
                                 AutoScaler.getToBeDeletedList().remove(this);
                                 AutoScaler.removeEC2Instance(awsInstance.getInstanceId());

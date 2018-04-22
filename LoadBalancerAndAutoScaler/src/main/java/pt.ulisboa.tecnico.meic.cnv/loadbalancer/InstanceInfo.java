@@ -138,7 +138,8 @@ public class InstanceInfo {
     }
 
     public void restore() {
-        removalThread.interrupt();
+        if(removalThread != null)
+            removalThread.interrupt();
         toBeRemoved = false;
         System.out.println("Restoring instance " + awsInstance.getInstanceId());
     }

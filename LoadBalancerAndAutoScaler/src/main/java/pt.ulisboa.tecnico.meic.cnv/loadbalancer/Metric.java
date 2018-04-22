@@ -170,11 +170,11 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
     public boolean match(RequestInfo requestInfo) {
 
         //ignoring different mazes
-        if(!requestInfo.maze.equals(this.maze)) {
+        if(!requestInfo.getMaze().equals(this.maze)) {
             return false;
         }
         //ignoring different strategies
-        if(!requestInfo.strategy.equals(this.strategy)) {
+        if(!requestInfo.getStrategy().equals(this.strategy)) {
             return false;
         }
 

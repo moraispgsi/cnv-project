@@ -1,9 +1,12 @@
 package pt.ulisboa.tecnico.meic.cnv.loadbalancer;
 
 import com.sun.net.httpserver.HttpExchange;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 public class RequestInfo {
 
@@ -15,12 +18,8 @@ public class RequestInfo {
     private String strategy;
     private String maze;
     private int estimatedComplexity;
+    private UUID uuid;
 
-    private boolean allocated = false;
-
-    public void setAllocated(boolean allocated){
-        this.allocated = allocated;
-    }
 
     public RequestInfo(HttpExchange httpExchange){
 
@@ -42,11 +41,20 @@ public class RequestInfo {
         this.strategy = strategy;
         this.maze = maze;
         this.estimatedComplexity = getSize() * (int)Math.floor(getDistance()) / velocity;
+        this.uuid = UUID.randomUUID();
     }
 
 
     public int getSize() {
         return RequestInfo.getSize(this.maze);
+    }
+
+    public String getStrategy() {
+        return strategy;
+    }
+
+    public String getMaze() {
+        return maze;
     }
 
     public static int getSize(String maze) {
@@ -103,7 +111,23 @@ public class RequestInfo {
         return result;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
 
+        if (o == null || getClass() != o.getClass()) return false;
 
+        RequestInfo that = (RequestInfo) o;
 
+        return new EqualsBuilder()
+                .append(uuid, that.uuid)
+                .isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 37)
+                .append(uuid)
+                .toHashCode();
+    }
 }

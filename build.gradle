@@ -15,6 +15,8 @@ subprojects {
     dependencies {
         testCompile "junit:junit:4+"
         compile group: 'com.amazonaws', name: 'aws-java-sdk', version: '1.11.313'
+        compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.1'
+        compile 'commons-codec:commons-codec:1.11'
     }
 
     applicationDefaultJvmArgs = ['-XX:-UseSplitVerifier']
@@ -30,7 +32,7 @@ subprojects {
         dependsOn( ':'+ project.name +':distZip')
         doLast {
             ssh.run {
-                session(remotes.webServer) {
+                session(remotes[project.name]) {
                     put from: 'build/distributions/' + project.name + '.zip', into: '/home/ec2-user/'
                     execute 'unzip -o /home/ec2-user/' + project.name + '.zip && rm /home/ec2-user/' + project.name + '.zip'
                     execute 'mkdir -p /home/ec2-user/.aws/'
@@ -48,10 +50,17 @@ project(':LoadBalancerAndAutoScaler') {
 
     //Deploy to AWS
     remotes {
-        webServer {
-            host = 'ec2-35-180-13-114.eu-west-3.compute.amazonaws.com'
+        LoadBalancerAndAutoScaler {
+            host = '35.180.13.114'
             user = 'ec2-user'
             identity = file("../keypairs/loadbalancerAndAutoScalerKeypair.pem") //pem file on HOME DIR, or change me
+        }
+    }
+
+    distZip {
+        into('LoadBalancerAndAutoScaler') {
+            from '..'
+            include 'resources/*/*'
         }
     }
 }
@@ -69,7 +78,7 @@ project(':server') {
 
     //Deploy to AWS
     remotes {
-        webServer {
+        server {
             host = '35.180.6.2'
             user = 'ec2-user'
             identity = file("../keypairs/ec2InstanceKeyPair.pem") //pem file on HOME DIR, or change me

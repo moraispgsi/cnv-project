@@ -3,7 +3,7 @@ package pt.ulisboa.tecnico.meic.cnv.loadbalancer;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
-import pt.ulisboa.tecnico.meic.cnv.loadbalancer.autoscaler.Autoscaler;
+import pt.ulisboa.tecnico.meic.cnv.loadbalancer.autoscaler.AutoScaler;
 
 import java.io.*;
 import java.net.InetSocketAddress;
@@ -22,6 +22,7 @@ public class WebServer {
     public static int requestsPerInstance = 0;
     public static int minInstancesFullyAvailable = 0;
     public static int maxInstances = 0;
+    public static int minInstances = 0;
 
     public static AtomicInteger coresAvailable= new AtomicInteger(0);
     public static AtomicInteger instancesBooting = new AtomicInteger(0);
@@ -32,12 +33,12 @@ public class WebServer {
     }
 
     private static Context context;
-    private static Autoscaler autoscaler;
+    private static AutoScaler autoscaler;
     private static Thread threadAutoscaler;
 
     public static void main(String[] args) throws Exception {
 
-        setShutdownHook();
+        setShutdownHook(); //TODO
 
         loadConfigFile();
 
@@ -46,10 +47,10 @@ public class WebServer {
                 "launch-wizard-2", "t2.micro");
 
         System.out.println ("Starting the autoscaler...");
-        autoscaler = new Autoscaler(context); //The constructor prepares a min number of instances and blocks until they are running
+        autoscaler = new AutoScaler(context); //The constructor prepares a min number of instances and blocks until they are running
         //start autoscaler
         threadAutoscaler = new Thread(autoscaler);
-        threadAutoscaler.start();
+        //threadAutoscaler.start();
 
         System.out.println ("Init load balancer web server...");
         HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
@@ -61,11 +62,15 @@ public class WebServer {
 
     }
 
+
+
     static class MyHandler implements HttpHandler {
+
+
 
         @Override
         public void handle(HttpExchange httpExchange) throws IOException {
-            try {
+
 /*
                 getAndAssignAvailableSlot()
                 slot not null?
@@ -85,28 +90,26 @@ public class WebServer {
 */
 
 
+            RequestInfo requestInfo = new RequestInfo(httpExchange);
 
+            InstanceInfo chosenCandidate = chooseSlot(requestInfo);
 
+            autoscale();
 
-                RequestInfo requestInfo = new RequestInfo(httpExchange);
+            forwardRequest(requestInfo, chosenCandidate, httpExchange);
 
-                InstanceInfo chosenCandidate = chooseSlot(requestInfo);
+            chosenCandidate.removeRequest(requestInfo);
 
-                //TODO autoScale()
+            autoscale();
 
-                forwardRequest(requestInfo, chosenCandidate, httpExchange);
-
-                //TODO removeSlot() && autoScale
-
-
-
+        }
 
 
 
 
 
 
-
+/*
 
                 List<Metric> metrics = DynamoDB.getInstance().getMetrics();
                 List<Metric> matches = new ArrayList<>();
@@ -193,6 +196,10 @@ public class WebServer {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }*/
+
+        private void autoscale(){
+            threadAutoscaler.start();
         }
 
         private InstanceInfo chooseSlot(RequestInfo requestInfo) {
@@ -296,6 +303,7 @@ public class WebServer {
             requestsPerInstance = Integer.parseInt(prop.getProperty("numberOfCPUs"));
             minInstancesFullyAvailable = Integer.parseInt(prop.getProperty("numberOfCPUs"));
             maxInstances = Integer.parseInt(prop.getProperty("numberOfCPUs"));
+            minInstances = Integer.parseInt(prop.getProperty("minInstances"));
 
         } catch (IOException ex) {
             throw new RuntimeException("Error loading config file.");
@@ -315,6 +323,7 @@ public class WebServer {
     private static void setShutdownHook() {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
+                AutoScaler.removeAll();
                 System.out.println("Shutting down instances... (not)");
             }
         });

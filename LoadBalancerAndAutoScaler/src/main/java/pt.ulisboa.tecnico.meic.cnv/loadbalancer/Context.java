@@ -35,7 +35,9 @@ public class Context {
                             "location (~/.aws/credentials), and is in valid format.",
                     e);
         }
-        ec2 = AmazonEC2ClientBuilder.standard().withRegion("eu-west-3").withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
+        ec2 = AmazonEC2ClientBuilder.standard().withRegion("eu-west-3").
+                withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
+
         this.instanceList = new ArrayList<>();
         this.ec2WebServerImage = ec2WebServerImage;
         this.ec2WebServerKeyPairName = ec2WebServerKeyPairName;
@@ -46,45 +48,26 @@ public class Context {
     public AmazonEC2 getEc2() {
         return ec2;
     }
-
-    public void setEc2(AmazonEC2 ec2) {
-        this.ec2 = ec2;
-    }
-
     public String getEc2WebServerImage() {
         return ec2WebServerImage;
     }
-
-    public void setEc2WebServerImage(String ec2WebServerImage) {
-        this.ec2WebServerImage = ec2WebServerImage;
-    }
-
     public String getEc2WebServerKeyPairName() {
         return ec2WebServerKeyPairName;
     }
-
-    public void setEc2WebServerKeyPairName(String ec2WebServerKeyPairName) {
-        this.ec2WebServerKeyPairName = ec2WebServerKeyPairName;
-    }
-
     public String getEc2WebServerSecurityGroup() {
         return ec2WebServerSecurityGroup;
     }
-
-    public void setEc2WebServerSecurityGroup(String ec2WebServerSecurityGroup) {
-        this.ec2WebServerSecurityGroup = ec2WebServerSecurityGroup;
-    }
-
     public String getEc2WebServerInstanceType() {
         return ec2WebServerInstanceType;
     }
 
-    public void setEc2WebServerInstanceType(String ec2WebServerInstanceType) {
-        this.ec2WebServerInstanceType = ec2WebServerInstanceType;
-    }
+
 
     public List<InstanceInfo> getInstanceList() {
         return instanceList;
+    }
+    public void addInstance(InstanceInfo instanceInfo){
+        instanceList.add(instanceInfo);
     }
 
 }

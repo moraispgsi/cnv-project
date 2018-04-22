@@ -1,15 +1,49 @@
 package pt.ulisboa.tecnico.meic.cnv.loadbalancer;
 
+import com.sun.net.httpserver.HttpExchange;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class RequestInfo {
-    public int initX;
-    public int initY;
-    public int finalX;
-    public int finalY;
-    public int velocity;
-    public String strategy;
-    public String maze;
-    public int estimatedComplexity;
+
+    private int initX;
+    private int initY;
+    private int finalX;
+    private int finalY;
+    private int velocity;
+    private String strategy;
+    private String maze;
+    private int estimatedComplexity;
+
+    private boolean allocated = false;
+
+    public void setAllocated(boolean allocated){
+        this.allocated = allocated;
+    }
+
+    public RequestInfo(HttpExchange httpExchange){
+
+        Map<String, String> params = queryToMap(httpExchange.getRequestURI().getQuery());
+
+        int initX = Integer.parseInt(params.get("x0")); //Point A
+        int initY = Integer.parseInt(params.get("y0")); //Point A
+        int finalX = Integer.parseInt(params.get("x1")); //Point B
+        int finalY = Integer.parseInt(params.get("y1")); //Point B
+        int velocity = Integer.parseInt(params.get("v")); //Velocity
+        String strategy = params.get("s"); //Strategy
+        String maze = params.get("m"); //Maze
+
+        this.initX = initX;
+        this.initY = initY;
+        this.finalX = finalX;
+        this.finalY = finalY;
+        this.velocity = velocity;
+        this.strategy = strategy;
+        this.maze = maze;
+        this.estimatedComplexity = getSize() * (int)Math.floor(getDistance()) / velocity;
+    }
+
 
     public int getSize() {
         return RequestInfo.getSize(this.maze);
@@ -48,15 +82,26 @@ public class RequestInfo {
         return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
     }
 
-    public int computeEstimatedComplexity(){
-        return this.getSize() * (int)Math.floor(this.getDistance()) / this.velocity;
+    public int getEstimatedComplexity(){
+        return estimatedComplexity;
     }
 
     public static int computeEstimatedComplexity(int size, double distance, int velocity) {
         return size * (int)Math.floor(distance) / velocity;
     }
 
-
+    private Map<String, String> queryToMap(String query) {
+        Map<String, String> result = new HashMap<String, String>();
+        for (String param : query.split("&")) {
+            String pair[] = param.split("=");
+            if (pair.length > 1) {
+                result.put(pair[0], pair[1]);
+            } else {
+                result.put(pair[0], "");
+            }
+        }
+        return result;
+    }
 
 
 

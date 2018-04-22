@@ -1,10 +1,10 @@
 package pt.ulisboa.tecnico.meic.cnv.loadbalancer.autoscaler;
 
 import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.*;
 import pt.ulisboa.tecnico.meic.cnv.loadbalancer.Context;
 import pt.ulisboa.tecnico.meic.cnv.loadbalancer.InstanceInfo;
+import pt.ulisboa.tecnico.meic.cnv.loadbalancer.WebServer;
 
 import java.util.*;
 
@@ -28,11 +28,31 @@ public class Autoscaler implements Runnable {
         }
     }
 
+    private boolean checkPlusOne(){
+        return !maxReached()
+                && (WebServer.minInstancesFullyAvailable > WebServer.coresAvailable.get() + WebServer.instancesBooting.get()
+                || WebServer.requestsAvailable.get() + WebServer.instancesBooting.get() == 0);
+    }
+
+    private boolean checkMinusOne(){
+        return context.getInstanceList().size() > WebServer.maxInstances && WebServer.coresAvailable.get() > WebServer.minInstancesFullyAvailable;
+    }
+
+    private boolean maxReached() {
+        return context.getInstanceList().size() <= WebServer.maxInstances;
+    }
+
     @Override
     public void run() {
 
         while(true) {
             try {
+                if(checkPlusOne()){
+                    for(InstanceInfo instanceInfo : getToBeDeletetList()){
+                        instanceInfo.remove(false);
+                    }
+                }
+
                 Thread.sleep(2000);
 
                 synchronized (context.getInstanceList()) {
@@ -40,7 +60,7 @@ public class Autoscaler implements Runnable {
 
                     //Filter available instances
                     for(InstanceInfo instanceInfo : context.getInstanceList()) {
-                        if(!instanceInfo.queueRemove) {
+                        if(!instanceInfo.toBeRemoved()) {
                             availableInstanceInfoList.add(instanceInfo);
                         }
                     }
@@ -69,10 +89,10 @@ public class Autoscaler implements Runnable {
                     Iterator<InstanceInfo> iterator = instanceInfoList.iterator();
                     while(iterator.hasNext()) {
                         InstanceInfo instanceInfo = iterator.next();
-                        if(instanceInfo.queueRemove &&
-                                instanceInfo.requestPending == 0) {
+                        if(instanceInfo.toBeRemoved() &&
+                                instanceInfo.getExecutingRequests().size() == 0) {
 
-                            removeEC2Instance(context.getEc2(), instanceInfo.id); //remove from EC2
+                            removeEC2Instance(context.getEc2(), instanceInfo.getId()); //remove from EC2
                             iterator.remove(); //Remove from the list
                         }
                     }
@@ -85,22 +105,10 @@ public class Autoscaler implements Runnable {
     }
 
     public void addEC2Instance() {
-        try {
-            Instance instance = Autoscaler.addEC2Instance(context.getEc2(), context.getEc2WebServerImage(),
-                    context.getEc2WebServerKeyPairName(), context.getEc2WebServerSecurityGroup(),
-                    context.getEc2WebServerInstanceType());
-            //Now that we know that the instance is running we make it available to the load balancer
-            InstanceInfo instanceInfo = new InstanceInfo();
-            instanceInfo.id = instance.getInstanceId();
-            instanceInfo.hostIp = instance.getPublicIpAddress() + ":8000";
 
-            synchronized (context.getInstanceList()) {
-                context.getInstanceList().add(instanceInfo);
-            }
 
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+
+
     }
 
     public void queueInstanceRemoval() {
@@ -108,7 +116,7 @@ public class Autoscaler implements Runnable {
             int availableCount = 0;
             List<InstanceInfo> instanceInfoList = context.getInstanceList();
             for(InstanceInfo instanceInfo: instanceInfoList) {
-                if(!instanceInfo.queueRemove) {
+                if(!instanceInfo.toBeRemoved()) {
                     availableCount ++;
                 }
             }
@@ -118,35 +126,45 @@ public class Autoscaler implements Runnable {
                 // instance, making its resource usage eventually 0, without disrupting its previously assign requests.
                 Random random = new Random();
                 int removeIndex = random.nextInt(instanceInfoList.size() + 1);
-                instanceInfoList.get(removeIndex).queueRemove = true;
+                instanceInfoList.get(removeIndex).remove();
             }
         }
     }
 
 
-    public static Instance addEC2Instance(AmazonEC2 ec2, String image, String keyPairName, String securityGroup, String instanceType) throws InterruptedException {
+    public static InstanceInfo addEC2Instance(Context context) {
 
-        RunInstancesRequest runInstancesRequest =
-                new RunInstancesRequest();
+        AmazonEC2 ec2 = context.getEc2();
 
-        runInstancesRequest.withImageId(image)
-                .withInstanceType(instanceType)
+        RunInstancesRequest runInstancesRequest = new RunInstancesRequest();
+
+        runInstancesRequest.withImageId(context.getEc2WebServerImage())
+                .withInstanceType(context.getEc2WebServerInstanceType())
                 .withMinCount(1)
                 .withMaxCount(1)
-                .withKeyName(keyPairName)
-                .withSecurityGroups(securityGroup);
+                .withKeyName(context.getEc2WebServerKeyPairName())
+                .withSecurityGroups(context.getEc2WebServerSecurityGroup());
 
-        RunInstancesResult runInstancesResult = ec2.runInstances(
-                runInstancesRequest);
+        RunInstancesResult runInstancesResult = ec2.runInstances(runInstancesRequest);
 
-        String newInstanceId = runInstancesResult.getReservation().getInstances()
-                .get(0).getInstanceId();
+        List<Instance> newInstancesList = runInstancesResult.getReservation().getInstances();
+
+        InstanceInfo instanceInfo = new InstanceInfo(newInstancesList.get(0));
+
+        synchronized (context.getInstanceList()) {
+            context.addInstance(instanceInfo);
+        }
+        return instanceInfo;
+
+/*
+
+        List<String> newInstanceIdList = new ArrayList<>();
+
+        for(Instance i : newInstancesList){
+            newInstanceIdList.add(i.getInstanceId());
+        }
 
 
-        List<String> instanceIdsList = new ArrayList<>();
-        instanceIdsList.add(newInstanceId);
-
-        //Verify if the instance is running
 
         //TODO - Test the instance's health by sending a ping.
 
@@ -155,7 +173,7 @@ public class Autoscaler implements Runnable {
         //While true :/
         while(true) {
             Thread.sleep(2000);
-            DescribeInstancesRequest describeInstancesRequest =new DescribeInstancesRequest();
+            DescribeInstancesRequest describeInstancesRequest = new DescribeInstancesRequest();
             describeInstancesRequest.setInstanceIds(instanceIdsList); //Describe this instances
             DescribeInstancesResult describeInstancesResult = ec2.describeInstances(describeInstancesRequest);
             List<Reservation> reservations  = describeInstancesResult.getReservations();
@@ -171,7 +189,8 @@ public class Autoscaler implements Runnable {
                     }
                 }
             }
-        }
+        }*/
+
     }
 
     //Removes an EC2 instance by ID

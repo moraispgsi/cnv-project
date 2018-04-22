@@ -335,7 +335,7 @@ public class WebServer {
     private static void setShutdownHook() {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
-                System.err.println("Shutting down instances... (not)");
+                System.err.println("Shutting down instances...");
                 AutoScaler.removeAll();
             }
         });

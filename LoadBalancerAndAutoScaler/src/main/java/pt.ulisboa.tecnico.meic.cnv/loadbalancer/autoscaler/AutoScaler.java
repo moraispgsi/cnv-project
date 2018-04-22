@@ -44,13 +44,17 @@ public class AutoScaler implements Runnable {
     }
 
     private void checkPlusOne(){
+        System.out.println ("AutoScaler: checking plus one");
         if(!maxReached() && (WebServer.minInstancesFullyAvailable > WebServer.coresAvailable.get() + WebServer.instancesBooting.get()
                 || WebServer.requestsAvailable.get() + WebServer.instancesBooting.get() == 0)) {
+
+            System.out.println ("AutoScaler: +1");
 
             //try to restore a toBeRemoved instance
             synchronized (getToBeDeletedList()) {
                 if (getToBeDeletedList().size() > 1) {
                     getToBeDeletedList().get(0).restore();
+                    System.out.println ("AutoScaler: Reusing a tobe removed instance");
                     return;
                 }
             }
@@ -61,8 +65,10 @@ public class AutoScaler implements Runnable {
     }
 
     private void checkMinusOne(){
-        if(context.getInstanceList().size() > WebServer.maxInstances && WebServer.coresAvailable.get() > WebServer.minInstancesFullyAvailable){
+        System.out.println ("AutoScaler: checking minus on");
+        if(context.getInstanceList().size() > WebServer.minInstances && WebServer.coresAvailable.get() > WebServer.minInstancesFullyAvailable){
 
+            System.out.println ("AutoScaler: -1");
             synchronized (context.getInstanceList()) {
                 InstanceInfo instanceInfo = findMinComplexityInstance();
                 instanceInfo.remove();
@@ -181,6 +187,7 @@ public class AutoScaler implements Runnable {
 
     private void addEC2Instance() {
 
+
         AmazonEC2 ec2 = getContext().getEc2();
 
         RunInstancesRequest runInstancesRequest = new RunInstancesRequest();
@@ -201,6 +208,7 @@ public class AutoScaler implements Runnable {
         synchronized (getContext().getInstanceList()) {
             getContext().addInstance(instanceInfo);
         }
+        System.out.println ("AutoScaler: added new ec2 instance with id: " + instanceInfo.getId());
     }
 
 
@@ -246,9 +254,11 @@ public class AutoScaler implements Runnable {
         TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
         termInstanceReq.withInstanceIds(instanceId);
         WebServer.getContext().getEc2().terminateInstances(termInstanceReq);
+        System.out.println ("Removed instance with id, " + instanceId + " from aws.");
     }
 
     public static void removeAll(){
+        System.out.println ("Trying to remove all instances from aws");
         for(InstanceInfo instanceInfo : WebServer.getContext().getInstanceList()){
             TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
             termInstanceReq.withInstanceIds(instanceInfo.getId());

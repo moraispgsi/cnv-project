@@ -71,24 +71,6 @@ public class WebServer {
         @Override
         public void handle(HttpExchange httpExchange) throws IOException {
 
-/*
-                getAndAssignAvailableSlot()
-                slot not null?
-                    new Thread autoScale
-                    forwardRequest to slot
-                    new thread( remove slot and autoscale
-                    return
-                else slot is null
-                    isInstanceBooting?
-                        sleep 2000 and continue
-                    else no
-                        is maxInstanceReached?
-                            no -> autoScale and continue
-                            yes ->
-                                getLessComplexityInstance()
-                                assignSlot()
-*/
-
 
             RequestInfo requestInfo = new RequestInfo(httpExchange);
 
@@ -200,6 +182,7 @@ public class WebServer {
 
         private void autoscale(){
             threadAutoscaler.start();
+            threadAutoscaler = new Thread(autoscaler);
         }
 
         private InstanceInfo chooseSlot(RequestInfo requestInfo) {
@@ -210,44 +193,54 @@ public class WebServer {
             InstanceInfo cpuCandidateInstanceInfo = null;
             InstanceInfo requestsCandidateInstanceInfo = null;
             InstanceInfo complexityCandidateInstanceInfo = null;
-            InstanceInfo chosenCandidate;
+            InstanceInfo chosenCandidate = null;
 
 
-            synchronized (getContext().getInstanceList()) {
-                for (InstanceInfo instanceInfo : getContext().getInstanceList()) {
-                    synchronized (instanceInfo) { //TODO
-                        if (!instanceInfo.isBooting() && !instanceInfo.toBeRemoved()) {
+            while(chosenCandidate == null) {
+                synchronized (getContext().getInstanceList()) {
+                    for (InstanceInfo instanceInfo : getContext().getInstanceList()) {
+                        synchronized (instanceInfo) {
+                            if (!instanceInfo.isBooting() && !instanceInfo.toBeRemoved()) {
 
-                            if (instanceInfo.getCPUSlots() >= maxCpuSlots
-                                    && instanceInfo.getExecutingRequests().size() < requestsPerInstance) {
-                                maxCpuSlots = instanceInfo.getCPUSlots();
-                                cpuCandidateInstanceInfo = instanceInfo;
+                                if (instanceInfo.getCpuFreeSlots() >= maxCpuSlots
+                                        && instanceInfo.getExecutingRequests().size() < requestsPerInstance) {
+                                    maxCpuSlots = instanceInfo.getCpuFreeSlots();
+                                    cpuCandidateInstanceInfo = instanceInfo;
 
-                            } else if (instanceInfo.getCPUSlots() == 0
-                                    && requestsPerInstance - instanceInfo.getExecutingRequests().size() >= maxRequestsSlots) {
-                                maxRequestsSlots = instanceInfo.getExecutingRequests().size();
-                                requestsCandidateInstanceInfo = instanceInfo;
+                                } else if (instanceInfo.getCpuFreeSlots() == 0
+                                        && requestsPerInstance - instanceInfo.getExecutingRequests().size() >= maxRequestsSlots) {
+                                    maxRequestsSlots = instanceInfo.getExecutingRequests().size();
+                                    requestsCandidateInstanceInfo = instanceInfo;
 
-                            } else if (minComplexity == 0 || instanceInfo.getComplexity() <= minComplexity) {
-                                minComplexity = instanceInfo.getComplexity();
-                                complexityCandidateInstanceInfo = instanceInfo;
+                                } else if (minComplexity == 0 || instanceInfo.getComplexity() <= minComplexity) {
+                                    minComplexity = instanceInfo.getComplexity();
+                                    complexityCandidateInstanceInfo = instanceInfo;
+                                }
+
+
                             }
-
-
                         }
                     }
+
+                    if (cpuCandidateInstanceInfo != null)
+                        chosenCandidate = cpuCandidateInstanceInfo;
+                    else if (requestsCandidateInstanceInfo != null)
+                        chosenCandidate = requestsCandidateInstanceInfo;
+                    else
+                        chosenCandidate = complexityCandidateInstanceInfo;
+
                 }
-
-                if (cpuCandidateInstanceInfo != null)
-                    chosenCandidate = cpuCandidateInstanceInfo;
-                else if (requestsCandidateInstanceInfo != null)
-                    chosenCandidate = requestsCandidateInstanceInfo;
-                else
-                    chosenCandidate = complexityCandidateInstanceInfo;
-
+                if(chosenCandidate == null) {
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
 
             chosenCandidate.addRequest(requestInfo);
+            System.out.println ("Choose candidate with id: " + chosenCandidate.getId());
             return chosenCandidate;
         }
 
@@ -255,16 +248,18 @@ public class WebServer {
 
 
 
-        private static void forwardRequest(RequestInfo currentRequestInfo, InstanceInfo choosenCandidate, HttpExchange httpExchange) {
+        private void forwardRequest(RequestInfo currentRequestInfo, InstanceInfo chosenCandidate, HttpExchange httpExchange) {
             try {
                 URL requestURL = new URL("http://"
-                        + choosenCandidate.getHostIp()
+                        + chosenCandidate.getHostIp()
                         + "/mzrun.html?"
                         + httpExchange.getRequestURI().getQuery());
 
-                System.out.println(requestURL);
+                System.out.println("Forward requesting to: " + requestURL);
 
                 URLConnection urlConnection = requestURL.openConnection();
+                urlConnection.setReadTimeout(0);
+                urlConnection.setConnectTimeout(0);
 
                 BufferedReader in = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
 
@@ -280,7 +275,10 @@ public class WebServer {
                 os.write(response.toString().getBytes(), 0, response.toString().getBytes().length);
                 os.close();
 
+                System.out.println(Thread.currentThread().getId() + ": Maze solved.");
+
             } catch (IOException e) {
+                System.out.println("Thread with id: "+ Thread.currentThread().getId() + " > failed during forward request.");
                 e.printStackTrace();
             }
 
@@ -319,12 +317,11 @@ public class WebServer {
 
     }
 
-    //TODO
     private static void setShutdownHook() {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
+                System.err.println("Shutting down instances... (not)");
                 AutoScaler.removeAll();
-                System.out.println("Shutting down instances... (not)");
             }
         });
     }

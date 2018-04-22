@@ -49,6 +49,7 @@ public class InstanceInfo {
                     if (instance.getInstanceId().equals(getId()) &&
                             instance.getState().getName().equals("running")) { //not sure if it is done this way
                         System.out.println("Instance " + instance.getInstanceId() + " is now running...");
+                        awsInstance = instance;
 
                         isBooting = false;
                         WebServer.instancesBooting.decrementAndGet();
@@ -71,7 +72,7 @@ public class InstanceInfo {
 
     public void addRequest(RequestInfo requestInfo) {
         synchronized (this){
-            if(getCPUSlots() > 0)
+            if(getCpuFreeSlots() > 0)
                 WebServer.coresAvailable.decrementAndGet();
         }
         WebServer.requestsAvailable.decrementAndGet();
@@ -81,13 +82,15 @@ public class InstanceInfo {
     public void removeRequest(RequestInfo requestInfo) {
         executingRequests.remove(requestInfo);
 
-        synchronized (this){
-            if(getCPUSlots() > 0)
-                WebServer.coresAvailable.addAndGet(1);
+        if(!toBeRemoved) {
+            synchronized (this) {
+                if (getCpuFreeSlots() > 0)
+                    WebServer.coresAvailable.addAndGet(1);
+            }
+            WebServer.requestsAvailable.addAndGet(1);
         }
-        WebServer.requestsAvailable.addAndGet(1);
-
         scheduleThreadToRemove();
+
     }
 
     public boolean toBeRemoved() {
@@ -95,7 +98,7 @@ public class InstanceInfo {
     }
     public void remove() {
         toBeRemoved = true;
-        WebServer.coresAvailable.addAndGet(-WebServer.numberOfCPUs+getCPUSlots());
+        WebServer.coresAvailable.addAndGet(-WebServer.numberOfCPUs+getCpuOccupiedSlots());
         WebServer.requestsAvailable.addAndGet(-WebServer.requestsPerInstance+executingRequests.size());
 
         scheduleThreadToRemove();
@@ -104,8 +107,8 @@ public class InstanceInfo {
     public void restore() {
         removalThread.interrupt();
         toBeRemoved = false;
-        WebServer.coresAvailable.addAndGet(WebServer.numberOfCPUs+getCPUSlots());
-        WebServer.requestsAvailable.addAndGet(-WebServer.requestsPerInstance+executingRequests.size());
+        WebServer.coresAvailable.addAndGet(WebServer.numberOfCPUs - getCpuOccupiedSlots());
+        WebServer.requestsAvailable.addAndGet(WebServer.requestsPerInstance-executingRequests.size());
     }
 
     private void scheduleThreadToRemove() {
@@ -114,7 +117,7 @@ public class InstanceInfo {
 
                 removalThread = new Thread(){
                     public void run(){
-                        System.out.println("RemovalThread of id" + awsInstance.getInstanceId() + "is running");
+                        System.out.println("Scheduling id " + awsInstance.getInstanceId() + " is running. Sleeping 10 seconds...");
                         try {
                             Thread.sleep(10000); //TODO
                             AutoScaler.removeEC2Instance(awsInstance.getInstanceId());
@@ -136,7 +139,7 @@ public class InstanceInfo {
     }
 
     public String getHostIp() {
-        return awsInstance.getPrivateIpAddress() + ":" + WebServer.PORT;
+        return awsInstance.getPublicIpAddress() + ":" + WebServer.PORT;
     }
 
     public int getComplexity() {
@@ -155,7 +158,11 @@ public class InstanceInfo {
 
 
 
-    public int getCPUSlots(){
-        return WebServer.numberOfCPUs - executingRequests.size();
+    public int getCpuFreeSlots(){
+        return Math.max(0, WebServer.numberOfCPUs - executingRequests.size());
+    }
+
+    public int getCpuOccupiedSlots(){
+        return WebServer.numberOfCPUs-getCpuFreeSlots();
     }
 }

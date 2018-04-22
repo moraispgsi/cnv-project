@@ -42,6 +42,9 @@ public class RequestInfo {
         this.maze = maze;
         this.estimatedComplexity = getSize() * (int)Math.floor(getDistance()) / velocity;
         this.uuid = UUID.randomUUID();
+
+        System.out.println (
+                "Thread with id: '" + Thread.currentThread().getId() + "' > Request: " + httpExchange.getRequestURI ().getQuery ());
     }
 
 

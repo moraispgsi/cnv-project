@@ -38,41 +38,44 @@ public class AutoScaler implements Runnable {
 
     @Override
     public void run() {
-
+        System.out.println("Autoscaling check.");
         checkPlusOne();
         checkMinusOne();
     }
 
     private void checkPlusOne(){
-        System.out.println ("AutoScaler: checking plus one");
-        if(!maxReached() && (WebServer.minInstancesFullyAvailable > WebServer.coresAvailable.get() + WebServer.instancesBooting.get()
-                || WebServer.requestsAvailable.get() + WebServer.instancesBooting.get() == 0)) {
+        synchronized (context.getInstanceList()) {
+            if (!maxReached() && (WebServer.minInstancesFullyAvailable > WebServer.coresAvailable.get() + WebServer.instancesBooting.get()
+                    || WebServer.requestsAvailable.get() + WebServer.instancesBooting.get() == 0)) {
 
-            System.out.println ("AutoScaler: +1");
+                System.out.println("AutoScaler: +1");
 
-            //try to restore a toBeRemoved instance
-            synchronized (getToBeDeletedList()) {
-                if (getToBeDeletedList().size() > 1) {
-                    System.out.println ("AutoScaler: Reusing a scheduled to be removed instance. id: " + getToBeDeletedList().get(0).getId());
-                    getToBeDeletedList().get(0).restore();
-                    getToBeDeletedList().remove(0);
-                    return;
+                //try to restore a toBeRemoved instance
+                synchronized (getToBeDeletedList()) {
+                    if (getToBeDeletedList().size() > 1) {
+                        System.out.println("AutoScaler: Reusing " + getToBeDeletedList().get(0).getId());
+                        getToBeDeletedList().get(0).restore();
+                        getToBeDeletedList().remove(0);
+                        return;
+                    }
                 }
-            }
 
-            addEC2Instance();
+                addEC2Instance();
+            }
         }
 
     }
 
     private void checkMinusOne(){
-        System.out.println ("AutoScaler: checking minus one");
-        if(context.getInstanceList().size() > WebServer.minInstances && WebServer.coresAvailable.get() > WebServer.minInstancesFullyAvailable){
+        synchronized (context.getInstanceList()){
+            if(context.getInstanceList().size() > WebServer.minInstances && WebServer.coresAvailable.get() > WebServer.minInstancesFullyAvailable){
 
-            System.out.println ("AutoScaler: -1");
-            synchronized (context.getInstanceList()) {
+                System.out.println ("AutoScaler: -1");
+
                 InstanceInfo instanceInfo = findMinComplexityInstance();
-                instanceInfo.remove();
+                synchronized (instanceInfo) {
+                    instanceInfo.remove();
+                }
 
                 synchronized (getToBeDeletedList()) {
                     getToBeDeletedList().add(instanceInfo);
@@ -83,7 +86,7 @@ public class AutoScaler implements Runnable {
     }
 
     private boolean maxReached() {
-        return context.getInstanceList().size() <= WebServer.maxInstances;
+        return context.getInstanceList().size() >= WebServer.maxInstances;
     }
 
 
@@ -206,9 +209,8 @@ public class AutoScaler implements Runnable {
 
         InstanceInfo instanceInfo = new InstanceInfo(newInstancesList.get(0));
 
-        synchronized (getContext().getInstanceList()) {
-            getContext().addInstance(instanceInfo);
-        }
+        getContext().addInstance(instanceInfo);
+
         System.out.println ("AutoScaler: added new ec2 instance with id: " + instanceInfo.getId());
     }
 

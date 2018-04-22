@@ -7,6 +7,7 @@ import pt.ulisboa.tecnico.meic.cnv.loadbalancer.autoscaler.AutoScaler;
 
 import java.io.*;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.*;
@@ -38,7 +39,7 @@ public class WebServer {
 
     public static void main(String[] args) throws Exception {
 
-        setShutdownHook(); //TODO
+        setShutdownHook();
 
         loadConfigFile();
 
@@ -78,7 +79,7 @@ public class WebServer {
 
             autoscale();
 
-            forwardRequest(requestInfo, chosenCandidate, httpExchange);
+            forwardRequest(chosenCandidate, httpExchange);
 
             chosenCandidate.removeRequest(requestInfo);
 
@@ -144,40 +145,10 @@ public class WebServer {
                         }
                     }
 
-                    serverURL = instanceInfoLessComplexity.getHostIp();
-                    System.out.println(instanceInfoLessComplexity);
 
-                    //Adding the current request information to the list of current requests of the instance.
-                    instanceInfoLessComplexity.addRequest(requestInfo);
                 }
 
-                //Forward request
-                URL requestURL = new URL("http://" + serverURL + "/mzrun.html?" + httpExchange.getRequestURI().getQuery());
-                System.out.println(requestURL);
-                URLConnection yc = requestURL.openConnection();
-                BufferedReader in = new BufferedReader(
-                        new InputStreamReader(
-                                yc.getInputStream()));
 
-                StringBuilder response = new StringBuilder();
-                String inputLine;
-                while ((inputLine = in.readLine()) != null)
-                    response.append(inputLine).append('\n');
-                in.close();
-
-                //Return response
-                httpExchange.sendResponseHeaders(200, response.length());
-                OutputStream os = httpExchange.getResponseBody();
-                os.write(response.toString().getBytes(), 0, response.toString().getBytes().length);
-                os.close();
-
-                //The request was fulfilled
-                synchronized (context.getInstanceList()) {
-                    instanceInfoLessComplexity.removeRequest(requestInfo);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
         }*/
 
         private void autoscale(){
@@ -222,12 +193,18 @@ public class WebServer {
                         }
                     }
 
-                    if (cpuCandidateInstanceInfo != null)
+                    if (cpuCandidateInstanceInfo != null) {
                         chosenCandidate = cpuCandidateInstanceInfo;
-                    else if (requestsCandidateInstanceInfo != null)
+                        System.out.println("Chose CpuCandidate " + chosenCandidate.getId());
+                    }
+                    else if (requestsCandidateInstanceInfo != null) {
                         chosenCandidate = requestsCandidateInstanceInfo;
-                    else
+                        System.out.println("Chose RequestCandidate " + chosenCandidate.getId());
+                    }
+                    else {
                         chosenCandidate = complexityCandidateInstanceInfo;
+                        System.out.println("Chose ComplexityCandidate " + chosenCandidate.getId());
+                    }
 
                 }
                 if(chosenCandidate == null) {
@@ -240,7 +217,6 @@ public class WebServer {
             }
 
             chosenCandidate.addRequest(requestInfo);
-            System.out.println ("Choose candidate with id: " + chosenCandidate.getId());
             return chosenCandidate;
         }
 
@@ -248,14 +224,16 @@ public class WebServer {
 
 
 
-        private void forwardRequest(RequestInfo currentRequestInfo, InstanceInfo chosenCandidate, HttpExchange httpExchange) {
+        private void forwardRequest(InstanceInfo chosenCandidate, HttpExchange httpExchange) {
             try {
                 URL requestURL = new URL("http://"
                         + chosenCandidate.getHostIp()
                         + "/mzrun.html?"
                         + httpExchange.getRequestURI().getQuery());
 
-                System.out.println("Forward requesting to: " + requestURL);
+                waitForWebServerToStart(chosenCandidate);
+
+                System.out.println("Forward to: " + requestURL);
 
                 URLConnection urlConnection = requestURL.openConnection();
                 urlConnection.setReadTimeout(0);
@@ -280,12 +258,47 @@ public class WebServer {
                 System.out.println(Thread.currentThread().getId() + ": Maze solved.");
 
             } catch (IOException e) {
-                System.out.println("Thread with id: "+ Thread.currentThread().getId() + " > failed during forward request.");
+                String response = "Thread with id: "+ Thread.currentThread().getId() + " > failed during forward request.";
+                System.out.println(response);
+                try {
+                    httpExchange.sendResponseHeaders(500, response.length());
+                    OutputStream os = httpExchange.getResponseBody();
+                    os.write(response.toString().getBytes(), 0, response.toString().getBytes().length);
+                    os.close();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
                 e.printStackTrace();
             }
 
         }
+
+        private void waitForWebServerToStart(InstanceInfo chosenCandidate) throws MalformedURLException {
+
+            URL healthCheckURL = new URL("http://"
+                    + chosenCandidate.getHostIp()
+                    + "/healthCheck");
+
+            System.out.println("HealthCheck");
+            while(true) {
+                try {
+                    URLConnection urlConnection = healthCheckURL.openConnection();
+                    urlConnection.getInputStream();
+                    break;
+                } catch (IOException e) {
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
+                    System.out.println("...");
+                }
+            }
+
+        }
     }
+
+
 
     private static void loadConfigFile() {
 
@@ -300,9 +313,9 @@ public class WebServer {
             prop.load(input);
 
             numberOfCPUs = Integer.parseInt(prop.getProperty("numberOfCPUs"));
-            requestsPerInstance = Integer.parseInt(prop.getProperty("numberOfCPUs"));
-            minInstancesFullyAvailable = Integer.parseInt(prop.getProperty("numberOfCPUs"));
-            maxInstances = Integer.parseInt(prop.getProperty("numberOfCPUs"));
+            requestsPerInstance = Integer.parseInt(prop.getProperty("requestsPerInstance"));
+            minInstancesFullyAvailable = Integer.parseInt(prop.getProperty("minInstancesFullyAvailable"));
+            maxInstances = Integer.parseInt(prop.getProperty("maxInstances"));
             minInstances = Integer.parseInt(prop.getProperty("minInstances"));
 
         } catch (IOException ex) {

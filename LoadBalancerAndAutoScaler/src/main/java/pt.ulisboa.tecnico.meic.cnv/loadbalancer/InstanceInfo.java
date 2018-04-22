@@ -48,9 +48,10 @@ public class InstanceInfo {
                     //if our instance is running
                     if (instance.getInstanceId().equals(getId()) &&
                             instance.getState().getName().equals("running")) { //not sure if it is done this way
-                        System.out.println("Instance " + instance.getInstanceId() + " is now running...");
-                        awsInstance = instance;
 
+                        System.out.println("Instance " + instance.getInstanceId() + " is running");
+
+                        awsInstance = instance;
                         isBooting = false;
                         WebServer.instancesBooting.decrementAndGet();
                         WebServer.coresAvailable.addAndGet(WebServer.numberOfCPUs);
@@ -80,7 +81,6 @@ public class InstanceInfo {
 
     }
     public void removeRequest(RequestInfo requestInfo) {
-        System.out.println("Removing request");
         executingRequests.remove(requestInfo);
 
         if(!toBeRemoved) {
@@ -98,6 +98,7 @@ public class InstanceInfo {
         return toBeRemoved;
     }
     public void remove() {
+        System.out.println("ToBeRemoved " + getId());
         toBeRemoved = true;
         WebServer.coresAvailable.addAndGet(-WebServer.numberOfCPUs+getCpuOccupiedSlots());
         WebServer.requestsAvailable.addAndGet(-WebServer.requestsPerInstance+executingRequests.size());
@@ -109,7 +110,7 @@ public class InstanceInfo {
         if(removalThread != null)
             removalThread.interrupt();
         toBeRemoved = false;
-        System.out.println("Restoring instance " + awsInstance.getInstanceId());
+        System.out.println("Restoring " + getId());
         WebServer.coresAvailable.addAndGet(WebServer.numberOfCPUs - getCpuOccupiedSlots());
         WebServer.requestsAvailable.addAndGet(WebServer.requestsPerInstance-executingRequests.size());
     }
@@ -120,16 +121,16 @@ public class InstanceInfo {
 
                 removalThread = new Thread(){
                     public void run(){
-                        System.out.println("Scheduling id " + awsInstance.getInstanceId() + " is running. Sleeping 30 seconds...");
+                        System.out.println("Instance " + awsInstance.getInstanceId() + " scheduled to be removed in 30 seconds...");
                         try {
-                            Thread.sleep(30000); //TODO
+                            Thread.sleep(30000);
                             synchronized (AutoScaler.getToBeDeletedList()) {
                                 AutoScaler.getToBeDeletedList().remove(this);
                                 AutoScaler.removeEC2Instance(awsInstance.getInstanceId());
                             }
 
                         } catch (InterruptedException e){
-                            System.out.println("RemovalThread of id" + awsInstance.getInstanceId() + " was interrupted");
+                            System.out.println("RemovalThread " + awsInstance.getInstanceId() + " was interrupted");
                         }
 
                     }

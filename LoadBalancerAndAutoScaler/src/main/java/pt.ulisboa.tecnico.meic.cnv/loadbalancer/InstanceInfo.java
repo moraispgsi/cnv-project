@@ -80,6 +80,7 @@ public class InstanceInfo {
 
     }
     public void removeRequest(RequestInfo requestInfo) {
+        System.out.println("Removing request");
         executingRequests.remove(requestInfo);
 
         if(!toBeRemoved) {
@@ -107,6 +108,7 @@ public class InstanceInfo {
     public void restore() {
         removalThread.interrupt();
         toBeRemoved = false;
+        System.out.println("Restoring instance " + awsInstance.getInstanceId());
         WebServer.coresAvailable.addAndGet(WebServer.numberOfCPUs - getCpuOccupiedSlots());
         WebServer.requestsAvailable.addAndGet(WebServer.requestsPerInstance-executingRequests.size());
     }
@@ -120,7 +122,10 @@ public class InstanceInfo {
                         System.out.println("Scheduling id " + awsInstance.getInstanceId() + " is running. Sleeping 10 seconds...");
                         try {
                             Thread.sleep(10000); //TODO
-                            AutoScaler.removeEC2Instance(awsInstance.getInstanceId());
+                            synchronized (AutoScaler.getToBeDeletedList()) {
+                                AutoScaler.getToBeDeletedList().remove(this);
+                                AutoScaler.removeEC2Instance(awsInstance.getInstanceId());
+                            }
 
                         } catch (InterruptedException e){
                             System.out.println("RemovalThread of id" + awsInstance.getInstanceId() + " was interrupted");

@@ -21,11 +21,11 @@ public class AutoScaler implements Runnable {
     private int maxInstance = 3;
     private Context context;
 
-    public List<InstanceInfo> getToBeDeletedList() {
+    public static List<InstanceInfo> getToBeDeletedList() {
         return toBeDeletedList;
     }
 
-    private List<InstanceInfo> toBeDeletedList = new ArrayList<>();
+    private static List<InstanceInfo> toBeDeletedList = new ArrayList<>();
 
     public AutoScaler(Context context) {
         this.context = context;
@@ -53,8 +53,9 @@ public class AutoScaler implements Runnable {
             //try to restore a toBeRemoved instance
             synchronized (getToBeDeletedList()) {
                 if (getToBeDeletedList().size() > 1) {
+                    System.out.println ("AutoScaler: Reusing a scheduled to be removed instance. id: " + getToBeDeletedList().get(0).getId());
                     getToBeDeletedList().get(0).restore();
-                    System.out.println ("AutoScaler: Reusing a tobe removed instance");
+                    getToBeDeletedList().remove(0);
                     return;
                 }
             }
@@ -65,7 +66,7 @@ public class AutoScaler implements Runnable {
     }
 
     private void checkMinusOne(){
-        System.out.println ("AutoScaler: checking minus on");
+        System.out.println ("AutoScaler: checking minus one");
         if(context.getInstanceList().size() > WebServer.minInstances && WebServer.coresAvailable.get() > WebServer.minInstancesFullyAvailable){
 
             System.out.println ("AutoScaler: -1");

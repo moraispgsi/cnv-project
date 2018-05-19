@@ -79,10 +79,23 @@ public class WebServer {
 
             } catch (InvalidMazeRunningStrategyException | CantReadMazeInputFileException | CantGenerateOutputFileException | InvalidCoordinatesException | NumberFormatException e) {
                 e.printStackTrace ();
+
+                // write error message to output
+                String response = e.getMessage();
+                t.sendResponseHeaders (200, response.length ());
+                OutputStream os = t.getResponseBody ();
+                os.write (response.getBytes(), 0, response.getBytes().length);
+                os.close ();
+
+
                 // delete record pre created by the thread, because the request wasn't finished
                 DynamoDB.getInstance ().deleteIncompleteMetricByThreadId (threadId);
+
+                return;
             } catch (Exception e) {
                 e.printStackTrace ();
+                return;
+                //TODO
             }
 
             File file = new File (responseFileName);

@@ -10,11 +10,11 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 
-import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.render.RenderMaze;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.CantGenerateOutputFileException;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.CantReadMazeInputFileException;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.InvalidCoordinatesException;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.InvalidMazeRunningStrategyException;
+import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.render.RenderMaze;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.render.RenderMazeHTMLClientCanvas;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.strategies.FactoryMazeRunningStrategies;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.strategies.MazeRunningStrategy;
@@ -98,10 +98,7 @@ public class Main {
         // Choose the way to render the maze and rendered it
         RenderMaze renderMaze = new RenderMazeHTMLClientCanvas();
         String mazeRendered = renderMaze.render(maze, velocity);
-
-
-//		mazeSolvedFile = "C:\\Users\\Ricardo Morais\\Documents\\teste.html";
-
+        		
         // Write the maze solved to the output mazeOutputFile
         List<String> lines = Arrays.asList(mazeRendered);
         Path file = Paths.get(mazeSolvedFile);

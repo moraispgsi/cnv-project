@@ -1,7 +1,7 @@
 package pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.strategies;
 
-import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.Maze;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.RobotController;
+import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.Maze;
 import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.InvalidCoordinatesException;
 
 public class DepthFirstSearchStrategy extends MazeRunningStrategy {

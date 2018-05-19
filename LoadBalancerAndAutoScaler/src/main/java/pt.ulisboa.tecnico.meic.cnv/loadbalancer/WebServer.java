@@ -14,7 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class WebServer {
-    public static final int PORT = 8000;
+    public static final int PORT = 80;
     private static final String CONFIG_FILE = "../resources/config/config.properties";
 
 

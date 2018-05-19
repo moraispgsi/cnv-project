@@ -21,7 +21,7 @@ import java.util.concurrent.Executors;
 
 public class WebServer {
 
-    public static final int PORT = 8000;
+    public static final int PORT = 80;
 
     static final String MAZE_DIR = "../resources/mazes/";
     static final String RESULT_DIR = "../resources/results/";

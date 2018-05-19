@@ -8,8 +8,6 @@ import pt.ulisboa.tecnico.meic.cnv.loadbalancer.WebServer;
 
 import java.util.*;
 
-import static pt.ulisboa.tecnico.meic.cnv.loadbalancer.WebServer.getContext;
-
 
 public class AutoScaler implements Runnable {
 
@@ -20,6 +18,10 @@ public class AutoScaler implements Runnable {
     private int minInstances =  1;
     private int maxInstance = 3;
     private Context context;
+
+    public Context getContext() {
+        return context;
+    }
 
     public static List<InstanceInfo> getToBeDeletedList() {
         return toBeDeletedList;
@@ -149,7 +151,7 @@ public class AutoScaler implements Runnable {
 
 
         for (InstanceInfo instanceInfo : getContext().getInstanceList()) {
-            if (!instanceInfo.isBooting() && !instanceInfo.toBeRemoved()) {
+            if (!instanceInfo.isRunning() && !instanceInfo.toBeRemoved()) {
 
                 if (minComplexity == 0 || instanceInfo.getComplexity() <= minComplexity) {
                     minComplexity = instanceInfo.getComplexity();

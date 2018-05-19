@@ -6,6 +6,11 @@ import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.Reservation;
 import pt.ulisboa.tecnico.meic.cnv.loadbalancer.autoscaler.AutoScaler;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,7 +34,13 @@ public class InstanceInfo {
         WebServer.instancesBooting.addAndGet(1);
     }
 
-    public boolean isBooting() {
+    /**
+     * Check if is booting, updating it's info when it's not.
+     * Call a /healthCheck to check for alive response
+     *
+     * @return true if is running
+     */
+    public boolean isRunning() {
         if (isBooting) {
             DescribeInstancesRequest describeInstancesRequest = new DescribeInstancesRequest();
 
@@ -62,7 +73,36 @@ public class InstanceInfo {
 
         }
 
-        return isBooting;
+        boolean alive = false;
+
+        // if it is running (not booting)
+        if(!isBooting) {
+
+            URL requestURL;
+
+            try {
+                requestURL = new URL("http://"
+                        + getHostIp()
+                        + "/healthCheck");
+
+
+                URLConnection urlConnection = requestURL.openConnection();
+                urlConnection.setReadTimeout(5000);
+                urlConnection.setConnectTimeout(5000);
+
+                BufferedReader in = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+
+                if (in.readLine().equals("alive")) {
+                    alive = true;
+                }
+
+            } catch (IOException e) {
+                System.err.println("/healthCheck failed: " + getId());
+            }
+
+        }
+
+        return alive;
     }
 
 

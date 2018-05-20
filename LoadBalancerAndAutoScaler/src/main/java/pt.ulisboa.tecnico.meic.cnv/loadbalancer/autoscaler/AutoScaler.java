@@ -42,59 +42,62 @@ public class AutoScaler implements Runnable {
     private void checkPlusOne(){
         System.out.println ("AutoScaler: checking plus one");
 
+        synchronized (context.getInstanceList()) {
+            int numAvailableInstances = getContext().getInstanceList().size() - getToBeDeletedList().size();
+            if(numAvailableInstances < WebServer.maxInstances &&
+                    getClusterComplexity() + WebServer.scaleUpThreshold > WebServer.thresholdComplexity * numAvailableInstances) {
 
-        if(maxReached()) {
+                System.out.println("AutoScaler: +1");
 
-            System.out.println ("AutoScaler: +1");
+                //try to restore a toBeRemoved instance
 
-            //try to restore a toBeRemoved instance
-            synchronized (getToBeDeletedList()) {
                 if (getToBeDeletedList().size() > 1) {
-                    System.out.println ("AutoScaler: Reusing a scheduled to be removed instance. id: " + getToBeDeletedList().get(0).getId());
+                    System.out.println("AutoScaler: Reusing a scheduled to be removed instance. id: " + getToBeDeletedList().get(0).getId());
                     getToBeDeletedList().get(0).restore();
                     getToBeDeletedList().remove(0);
                     return;
                 }
-            }
 
-            addEC2Instance();
+                addEC2Instance();
+            }
         }
 
     }
 
     private void checkMinusOne(){
         System.out.println ("AutoScaler: checking minus one");
-        //TODO
-        if(false && context.getInstanceList().size() > WebServer.minInstances && WebServer.coresAvailable.get() > WebServer.minInstancesFullyAvailable){
 
-            System.out.println ("AutoScaler: -1");
-            synchronized (context.getInstanceList()) {
+        synchronized (context.getInstanceList()) {
+            int numInstances = getContext().getInstanceList().size();
+            double numberInstancesMinusOne = context.getInstanceList().size() - 1;
+            double clusterMinusOneMaxLoad = WebServer.thresholdComplexity * numberInstancesMinusOne;
+            double clusterMinusOneThresholdLoad = clusterMinusOneMaxLoad * WebServer.scaleDownThreshold;
+
+            if(numInstances > WebServer.minInstances &&
+                    getClusterComplexity() < clusterMinusOneThresholdLoad) {
+                System.out.println ("AutoScaler: -1");
+
                 InstanceInfo instanceInfo = findMinComplexityInstance();
                 instanceInfo.remove();
+                getToBeDeletedList().add(instanceInfo);
 
-                synchronized (getToBeDeletedList()) {
-                    getToBeDeletedList().add(instanceInfo);
-                }
             }
-
         }
     }
 
-    /**
-     *
-     * Checks if the clusterComplexity +  scaleUpThreshold surpasses the thresholdComplexity * the number of instances
-     *
-     * @return true if it does surpasses, indicating the need for a scaleUp
-     */
-    private boolean maxReached() {
-        synchronized (getContext().getInstanceList()){
-            double clusterComplexity = 0;
-            for (InstanceInfo instanceInfo : getContext().getInstanceList()) {
+
+    private double getClusterComplexity() {
+
+        double clusterComplexity = 0;
+        for (InstanceInfo instanceInfo : getContext().getInstanceList()) {
+            if(!instanceInfo.toBeRemoved()){
                 clusterComplexity += instanceInfo.getComplexity();
             }
-            return clusterComplexity + WebServer.scaleUpThreshold > WebServer.thresholdComplexity * getContext().getInstanceList().size();
         }
+        return clusterComplexity;
+
     }
+
 
 
     /*while(true) {

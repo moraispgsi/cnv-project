@@ -14,22 +14,18 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class WebServer {
-    public static final int PORT = 8000;
+    public static final int PORT = 80;
     private static final String CONFIG_FILE = "../resources/config/config.properties";
 
-
-    public static int numberOfCPUs = 0;
-    public static int requestsPerInstance = 0;
-    public static int minInstancesFullyAvailable = 0;
     public static int maxInstances = 0;
     public static int minInstances = 0;
     public static int thresholdComplexity = 0;
     public static int scaleUpThreshold = 0;
+    public static int scaleDownThreshold = 0;
+    public static int minMetricSample = 0;
 
 
-    public static AtomicInteger coresAvailable= new AtomicInteger(0);
     public static AtomicInteger instancesBooting = new AtomicInteger(0);
-    public static AtomicInteger requestsAvailable = new AtomicInteger(0);
 
     public static Context getContext() {
         return context;
@@ -108,95 +104,55 @@ public class WebServer {
 
         }
 
+        /**
+         * Receives a requestinfo, then it tries to find matching metrics that are similar enough to the request.
+         * If a minimum sample of metrics match the given requestInfo parameters, the sample is used to calculate the
+         * complexity of the request. If the metrics are used, the complexity is the average of the matched metrics complexity
+         * and its normalized to a scale between 0 and 10 using the max complexity taken from all the metrics.
+         *
+         * @param requestInfo the request info to evaluate the complexity
+         * @return the calculated complexity
+         */
+        public double getComplexity(RequestInfo requestInfo) {
+            List<Metric> metrics = DynamoDB.getInstance().getMetrics();
+            List<Metric> matches = new ArrayList<>();
+            Double maxComplexity = 0.0;
+            for (Metric metric : metrics) {
 
-/*
-
-                List<Metric> metrics = DynamoDB.getInstance().getMetrics();
-                List<Metric> matches = new ArrayList<>();
-                for (Metric metric : metrics) {
-                    if (metric.match(requestInfo)) {
-                        matches.add(metric);
-                    }
+                Double complexity = (double) metric.computeComplexity();
+                if (metric.match(requestInfo)) {
+                    matches.add(metric);
                 }
 
-                System.out.println("Metrics " + metrics.size());
-
-                System.out.println("Matches " + matches.size());
-
-                if (matches.size() != 0) {
-                    double sum = 0;
-                    for (Metric metric : matches) {
-                        double ratio = metric.calculateRatio();
-                        sum += ratio;
-                    }
-                    double averageRatio = sum / matches.size();
-                    requestInfo.estimatedComplexity = (int) (requestInfo.getEstimatedComplexity() * averageRatio);
-                } else {
-                    //default calculation
-                    requestInfo.estimatedComplexity = requestInfo.getEstimatedComplexity();
+                //Find the max complexity
+                if(complexity > maxComplexity) {
+                    maxComplexity = complexity;
                 }
 
-                InstanceInfo instanceInfoLessComplexity = null;
-                int currentComplexity = 0;
-                String serverURL;
-                synchronized (context.getInstanceList()) {
-
-                    List<InstanceInfo> availableInstanceInfoList = new ArrayList<>();
-
-                    //Filter available instances
-                    for (InstanceInfo instanceInfo : context.getInstanceList()) {
-                        if (!instanceInfo.toBeRemoved()) {
-                            availableInstanceInfoList.add(instanceInfo);
-                        }
-                    }
-
-                    if (availableInstanceInfoList.size() == 0) {
-                        throw new RuntimeException("No instance available to redirect the request to.");
-                    }
-
-                    for (InstanceInfo instanceInfo : availableInstanceInfoList) {
-                        int sum = instanceInfo.getComplexity();
-                        if (instanceInfoLessComplexity == null || currentComplexity > sum) {
-                            instanceInfoLessComplexity = instanceInfo;
-                            currentComplexity = sum;
-                        }
-                    }
-
-                    serverURL = instanceInfoLessComplexity.getHostIp();
-                    System.out.println(instanceInfoLessComplexity);
-
-                    //Adding the current request information to the list of current requests of the instance.
-                    instanceInfoLessComplexity.addRequest(requestInfo);
-                }
-
-                //Forward request
-                URL requestURL = new URL("http://" + serverURL + "/mzrun.html?" + httpExchange.getRequestURI().getQuery());
-                System.out.println(requestURL);
-                URLConnection yc = requestURL.openConnection();
-                BufferedReader in = new BufferedReader(
-                        new InputStreamReader(
-                                yc.getInputStream()));
-
-                StringBuilder response = new StringBuilder();
-                String inputLine;
-                while ((inputLine = in.readLine()) != null)
-                    response.append(inputLine).append('\n');
-                in.close();
-
-                //Return response
-                httpExchange.sendResponseHeaders(200, response.length());
-                OutputStream os = httpExchange.getResponseBody();
-                os.write(response.toString().getBytes(), 0, response.toString().getBytes().length);
-                os.close();
-
-                //The request was fulfilled
-                synchronized (context.getInstanceList()) {
-                    instanceInfoLessComplexity.removeRequest(requestInfo);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
-        }*/
+
+            System.out.println("Metrics " + metrics.size());
+
+            System.out.println("Matches " + matches.size());
+
+            if (matches.size() > minMetricSample) {
+                double sum = 0;
+
+                for (Metric metric : matches) {
+                    sum += metric.computeComplexity();
+                }
+
+                double average = sum / matches.size();
+                double normalizedAverage = average * 10 / maxComplexity;
+
+                requestInfo.setEstimatedComplexity(normalizedAverage);
+                return normalizedAverage;
+            } else {
+                //default calculation
+                return requestInfo.getEstimatedComplexity();
+            }
+        }
+
 
         private void autoscale(){
             threadAutoscaler.start();
@@ -215,7 +171,7 @@ public class WebServer {
             double minComplexity = 0;
 
 
-            double newComplexity = requestInfo.getEstimatedComplexity();
+            double newComplexity = getComplexity(requestInfo);
             InstanceInfo chosenCandidate = null;
 
             while(chosenCandidate == null) {
@@ -262,8 +218,8 @@ public class WebServer {
                 }
 
                 try {
-                    System.out.println("Sleeping 3 seconds...");
-                    Thread.sleep(3000);
+                    System.out.println("Sleeping 5 seconds...");
+                    Thread.sleep(5000);
                 } catch (InterruptedException e) {
                     e.getStackTrace();
                 }
@@ -312,13 +268,12 @@ public class WebServer {
             // load a properties file
             prop.load(input);
 
-            numberOfCPUs = Integer.parseInt(prop.getProperty("numberOfCPUs"));
-            requestsPerInstance = Integer.parseInt(prop.getProperty("numberOfCPUs"));
-            minInstancesFullyAvailable = Integer.parseInt(prop.getProperty("numberOfCPUs"));
             maxInstances = Integer.parseInt(prop.getProperty("numberOfCPUs"));
             minInstances = Integer.parseInt(prop.getProperty("minInstances"));
             thresholdComplexity = Integer.parseInt(prop.getProperty("thresholdComplexity"));
             scaleUpThreshold = Integer.parseInt(prop.getProperty("scaleUpThreshold"));
+            scaleDownThreshold = Integer.parseInt(prop.getProperty("scaleDownThreshold"));
+            minMetricSample = Integer.parseInt(prop.getProperty("minMetricSample"));
 
         } catch (IOException ex) {
             throw new RuntimeException("Error loading config file.");

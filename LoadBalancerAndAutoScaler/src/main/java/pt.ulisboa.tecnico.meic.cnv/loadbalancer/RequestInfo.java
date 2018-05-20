@@ -19,7 +19,7 @@ public class RequestInfo {
     private int velocity;
     private String strategy;
     private String maze;
-    private int estimatedComplexity;
+    private double estimatedComplexity = 0;
     private UUID uuid;
 
 
@@ -59,6 +59,10 @@ public class RequestInfo {
 
     public String getMaze() {
         return maze;
+    }
+
+    public void setEstimatedComplexity(double estimatedComplexity) {
+        this.estimatedComplexity = estimatedComplexity;
     }
 
     /**
@@ -106,7 +110,10 @@ public class RequestInfo {
     }
 
     public double getEstimatedComplexity(){
-        return computeEstimatedComplexity(getSize(), getDistance(), velocity);
+        if(estimatedComplexity == 0) {
+            return computeEstimatedComplexity(getSize(), getDistance(), velocity);
+        }
+        return this.estimatedComplexity;
     }
 
     /**

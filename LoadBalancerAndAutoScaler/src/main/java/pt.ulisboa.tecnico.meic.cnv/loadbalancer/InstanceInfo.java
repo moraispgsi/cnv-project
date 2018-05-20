@@ -58,8 +58,6 @@ public class InstanceInfo {
 
                         isBooting = false;
                         WebServer.instancesBooting.decrementAndGet();
-                        WebServer.coresAvailable.addAndGet(WebServer.numberOfCPUs);
-                        WebServer.requestsAvailable.addAndGet(WebServer.requestsPerInstance);
                         break;
                     }
                 }
@@ -115,27 +113,12 @@ public class InstanceInfo {
     }
 
     public void addRequest(RequestInfo requestInfo) {
-        synchronized (this){
-            if(getCpuFreeSlots() > 0)
-                WebServer.coresAvailable.decrementAndGet();
-        }
-        WebServer.requestsAvailable.decrementAndGet();
         executingRequests.add(requestInfo);
-
     }
     public void removeRequest(RequestInfo requestInfo) {
         System.out.println("Removing request");
         executingRequests.remove(requestInfo);
-
-        if(!toBeRemoved) {
-            synchronized (this) {
-                if (getCpuFreeSlots() > 0)
-                    WebServer.coresAvailable.addAndGet(1);
-            }
-            WebServer.requestsAvailable.addAndGet(1);
-        }
         scheduleThreadToRemove();
-
     }
 
     public boolean toBeRemoved() {
@@ -143,9 +126,6 @@ public class InstanceInfo {
     }
     public void remove() {
         toBeRemoved = true;
-        WebServer.coresAvailable.addAndGet(-WebServer.numberOfCPUs+getCpuOccupiedSlots());
-        WebServer.requestsAvailable.addAndGet(-WebServer.requestsPerInstance+executingRequests.size());
-
         scheduleThreadToRemove();
     }
 
@@ -153,8 +133,6 @@ public class InstanceInfo {
         removalThread.interrupt();
         toBeRemoved = false;
         System.out.println("Restoring instance " + awsInstance.getInstanceId());
-        WebServer.coresAvailable.addAndGet(WebServer.numberOfCPUs - getCpuOccupiedSlots());
-        WebServer.requestsAvailable.addAndGet(WebServer.requestsPerInstance-executingRequests.size());
     }
 
     private void scheduleThreadToRemove() {
@@ -204,14 +182,4 @@ public class InstanceInfo {
                 + ", toBeRemoved=" + toBeRemoved + '}';
     }
 
-
-
-
-    public int getCpuFreeSlots(){
-        return Math.max(0, WebServer.numberOfCPUs - executingRequests.size());
-    }
-
-    public int getCpuOccupiedSlots(){
-        return WebServer.numberOfCPUs-getCpuFreeSlots();
-    }
 }

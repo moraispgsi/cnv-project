@@ -78,7 +78,7 @@ public class InstanceInfo {
 
         boolean alive = false;
 
-        if(!isBooting) {
+        if(!isBooting()) {
 
             URL requestURL;
 

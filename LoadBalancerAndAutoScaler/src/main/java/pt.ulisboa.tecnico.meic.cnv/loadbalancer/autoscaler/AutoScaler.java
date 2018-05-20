@@ -49,6 +49,7 @@ public class AutoScaler implements Runnable {
 
                 System.out.println("AutoScaler: +1");
 
+
                 //try to restore a toBeRemoved instance
 
                 if (getToBeDeletedList().size() > 1) {

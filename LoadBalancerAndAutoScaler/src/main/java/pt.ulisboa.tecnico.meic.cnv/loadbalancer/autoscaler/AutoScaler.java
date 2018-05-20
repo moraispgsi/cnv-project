@@ -42,7 +42,6 @@ public class AutoScaler implements Runnable {
     private void checkPlusOne(){
         System.out.println ("AutoScaler: checking plus one");
 
-
         if(maxReached()) {
 
             System.out.println ("AutoScaler: +1");

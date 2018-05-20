@@ -227,13 +227,13 @@ public class WebServer {
                     for (InstanceInfo instanceInfo : getContext().getInstanceList()) {
                         synchronized (instanceInfo) {
 
-                            // check if running and not to be removed
+                            // check if booting and not to be removed
                             if(instanceInfo.isBooting() || instanceInfo.toBeRemoved()) {
                                 notReadyInstanceDetected = true;
                                 continue;
                             }
 
-                            if (instanceInfo.isRunning()) {
+                            if (instanceInfo.isRunning() && !instanceInfo.toBeRemoved()) {
 
                                 //check if adding this request doesn't pass the threshold
                                 if (instanceInfo.getComplexity() + newComplexity <= thresholdComplexity &&
@@ -244,14 +244,14 @@ public class WebServer {
                                 }
 
 
-                            } else
-                                notReadyInstanceDetected = true;
+                            }
                         }
                     }
 
                     if(chosenCandidate != null) {
                         chosenCandidate.addRequest(requestInfo);
                         System.out.println("Chosen candidate: " + chosenCandidate.getId());
+                        break;
                     }
                 }
 

@@ -11,12 +11,6 @@ import java.util.*;
 
 public class AutoScaler implements Runnable {
 
-    //TODO - adjust the values
-    private final int MIN_LOAD_COMPLEXITY = 100;
-    private final int MAX_LOAD_COMPLEXITY = 4000;
-
-    private int minInstances =  1;
-    private int maxInstance = 3;
     private Context context;
 
     public Context getContext() {
@@ -47,8 +41,9 @@ public class AutoScaler implements Runnable {
 
     private void checkPlusOne(){
         System.out.println ("AutoScaler: checking plus one");
-        if(!maxReached() && (WebServer.minInstancesFullyAvailable > WebServer.coresAvailable.get() + WebServer.instancesBooting.get()
-                || WebServer.requestsAvailable.get() + WebServer.instancesBooting.get() == 0)) {
+
+
+        if(maxReached()) {
 
             System.out.println ("AutoScaler: +1");
 
@@ -69,7 +64,8 @@ public class AutoScaler implements Runnable {
 
     private void checkMinusOne(){
         System.out.println ("AutoScaler: checking minus one");
-        if(context.getInstanceList().size() > WebServer.minInstances && WebServer.coresAvailable.get() > WebServer.minInstancesFullyAvailable){
+        //TODO
+        if(false && context.getInstanceList().size() > WebServer.minInstances && WebServer.coresAvailable.get() > WebServer.minInstancesFullyAvailable){
 
             System.out.println ("AutoScaler: -1");
             synchronized (context.getInstanceList()) {
@@ -84,8 +80,20 @@ public class AutoScaler implements Runnable {
         }
     }
 
+    /**
+     *
+     * Checks if the clusterComplexity +  scaleUpThreshold surpasses the thresholdComplexity * the number of instances
+     *
+     * @return true if it does surpasses, indicating the need for a scaleUp
+     */
     private boolean maxReached() {
-        return context.getInstanceList().size() <= WebServer.maxInstances;
+        synchronized (getContext().getInstanceList()){
+            double clusterComplexity = 0;
+            for (InstanceInfo instanceInfo : getContext().getInstanceList()) {
+                clusterComplexity += instanceInfo.getComplexity();
+            }
+            return clusterComplexity + WebServer.scaleUpThreshold > WebServer.thresholdComplexity * getContext().getInstanceList().size();
+        }
     }
 
 
@@ -146,7 +154,7 @@ public class AutoScaler implements Runnable {
 */
     private InstanceInfo findMinComplexityInstance() {
 
-        int minComplexity = 0;
+        double minComplexity = 0;
         InstanceInfo complexityCandidateInstanceInfo = null;
 
 
@@ -177,7 +185,7 @@ public class AutoScaler implements Runnable {
                 }
             }
 
-            if(availableCount > minInstances) {
+            if(availableCount > WebServer.minInstances) {
                 //We can choose a random instance because the load balancer will not redirect any more requests to the
                 // instance, making its resource usage eventually 0, without disrupting its previously assign requests.
                 Random random = new Random();

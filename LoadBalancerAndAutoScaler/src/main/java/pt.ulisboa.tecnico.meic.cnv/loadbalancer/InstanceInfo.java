@@ -34,13 +34,7 @@ public class InstanceInfo {
         WebServer.instancesBooting.addAndGet(1);
     }
 
-    /**
-     * Check if is booting, updating it's info when it's not.
-     * Call a /healthCheck to check for alive response
-     *
-     * @return true if is running
-     */
-    public boolean isRunning() {
+    public boolean isBooting() {
         if (isBooting) {
             DescribeInstancesRequest describeInstancesRequest = new DescribeInstancesRequest();
 
@@ -73,9 +67,19 @@ public class InstanceInfo {
 
         }
 
+        return isBooting;
+    }
+
+    /**
+     * Check if is booting, updating it's info when it's not.
+     * Call a /healthCheck to check for alive response
+     *
+     * @return true if is running
+     */
+    public boolean isRunning() {
+
         boolean alive = false;
 
-        // if it is running (not booting)
         if(!isBooting) {
 
             URL requestURL;
@@ -187,7 +191,7 @@ public class InstanceInfo {
         return awsInstance.getPublicIpAddress() + ":" + WebServer.PORT;
     }
 
-    public int getComplexity() {
+    public double getComplexity() {
         int sum = 0;
         for(RequestInfo requestInfo: this.executingRequests) {
             sum += requestInfo.getEstimatedComplexity();

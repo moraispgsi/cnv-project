@@ -10,6 +10,8 @@ import java.util.UUID;
 
 public class RequestInfo {
 
+    private static final int MAX_COMPLEXITY = 4000000; // 2000 * 1 * 2000
+    private static final int MAX_VELOCITIY = 100;
     private int initX;
     private int initY;
     private int finalX;
@@ -40,7 +42,6 @@ public class RequestInfo {
         this.velocity = velocity;
         this.strategy = strategy;
         this.maze = maze;
-        this.estimatedComplexity = getSize() * (int)Math.floor(getDistance()) / velocity;
         this.uuid = UUID.randomUUID();
 
         System.out.println (
@@ -60,45 +61,64 @@ public class RequestInfo {
         return maze;
     }
 
+    /**
+     *
+     * Calculates the size of the maze, summing the sizes of the maze
+     *
+     * @param maze
+     * @return
+     */
     public static int getSize(String maze) {
         switch(maze) {
             case "Maze50.maze":
-                return (int) Math.pow(50, 2);
+                return 50*2;
             case "Maze100.maze":
-                return (int) Math.pow(100, 2);
+                return 100*2;
             case "Maze250.maze":
-                return (int) Math.pow(250, 2);
+                return 250*2;
             case "Maze300.maze":
-                return (int) Math.pow(300, 2);
+                return 300*2;
             case "Maze500.maze":
-                return (int) Math.pow(500, 2);
+                return 500*2;
             case "Maze750.maze":
-                return (int) Math.pow(750, 2);
+                return 750*2;
             case "Maze1000.maze":
-                return (int) Math.pow(1000, 2);
+                return 1000*2;
             default:
-                return 0;
+                return 1;
         }
     }
 
+
     public double getDistance() {
-        int x = initX - finalX;
-        int y = initY - finalY;
-        return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+        return RequestInfo.getDistance(initX, initY, finalX, finalY);
     }
 
+    /**
+     * Gets the euclidean distance between (initX, initY) and (finalX, finalY)
+     *
+     * @return
+     */
     public static double getDistance(int initX, int initY, int finalX, int finalY) {
         int x = initX - finalX;
         int y = initY - finalY;
-        return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+        return Math.abs(x) + Math.abs(y);
     }
 
-    public int getEstimatedComplexity(){
-        return estimatedComplexity;
+    public double getEstimatedComplexity(){
+        return computeEstimatedComplexity(getSize(), getDistance(), velocity);
     }
 
-    public static int computeEstimatedComplexity(int size, double distance, int velocity) {
-        return size * (int)Math.floor(distance) / velocity;
+    /**
+     * Uses the euclidean distance, a fraction of the velocity (between 0 and 1), and the size of the maze
+     *
+     * @param size
+     * @param distance
+     * @param velocity
+     * @return a value between 0 and 10
+     */
+    public static double computeEstimatedComplexity(int size, double distance, int velocity) {
+        return (distance * (MAX_VELOCITIY/velocity) * size) * 10 / MAX_COMPLEXITY;
     }
 
     private Map<String, String> queryToMap(String query) {

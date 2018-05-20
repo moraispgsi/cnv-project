@@ -23,6 +23,9 @@ public class WebServer {
     public static int minInstancesFullyAvailable = 0;
     public static int maxInstances = 0;
     public static int minInstances = 0;
+    public static int thresholdComplexity = 0;
+    public static int scaleUpThreshold = 0;
+
 
     public static AtomicInteger coresAvailable= new AtomicInteger(0);
     public static AtomicInteger instancesBooting = new AtomicInteger(0);
@@ -209,63 +212,65 @@ public class WebServer {
          */
         private InstanceInfo loadBalancerPicker(RequestInfo requestInfo) {
 
-            int maxCpuSlots = 1;
-            int maxRequestsSlots = 1;
-            int minComplexity = 0;
-            InstanceInfo cpuCandidateInstanceInfo = null;
-            InstanceInfo requestsCandidateInstanceInfo = null;
-            InstanceInfo complexityCandidateInstanceInfo = null;
+            double minComplexity = 0;
+
+
+            double newComplexity = requestInfo.getEstimatedComplexity();
             InstanceInfo chosenCandidate = null;
 
-
             while(chosenCandidate == null) {
+                boolean notReadyInstanceDetected = false;
+
                 synchronized (getContext().getInstanceList()) {
+
+                    //pick the instance with the minimum complexity
                     for (InstanceInfo instanceInfo : getContext().getInstanceList()) {
                         synchronized (instanceInfo) {
-                            if (instanceInfo.isRunning() && !instanceInfo.toBeRemoved()) {
 
-                                //TODO insert better logic
+                            // check if running and not to be removed
+                            if(instanceInfo.isBooting() || instanceInfo.toBeRemoved()) {
+                                notReadyInstanceDetected = true;
+                                continue;
+                            }
 
-                                if (instanceInfo.getCpuFreeSlots() >= maxCpuSlots
-                                        && instanceInfo.getExecutingRequests().size() < requestsPerInstance) {
-                                    maxCpuSlots = instanceInfo.getCpuFreeSlots();
-                                    cpuCandidateInstanceInfo = instanceInfo;
+                            if (instanceInfo.isRunning()) {
 
-                                } else if (instanceInfo.getCpuFreeSlots() == 0
-                                        && requestsPerInstance - instanceInfo.getExecutingRequests().size() >= maxRequestsSlots) {
-                                    maxRequestsSlots = instanceInfo.getExecutingRequests().size();
-                                    requestsCandidateInstanceInfo = instanceInfo;
+                                //check if adding this request doesn't pass the threshold
+                                if (instanceInfo.getComplexity() + newComplexity <= thresholdComplexity &&
+                                        (minComplexity == 0 || instanceInfo.getComplexity() <= minComplexity)) {
 
-                                } else if (minComplexity == 0 || instanceInfo.getComplexity() <= minComplexity) {
                                     minComplexity = instanceInfo.getComplexity();
-                                    complexityCandidateInstanceInfo = instanceInfo;
+                                    chosenCandidate = instanceInfo;
                                 }
 
 
-                            }
+                            } else
+                                notReadyInstanceDetected = true;
                         }
                     }
 
-                    if (cpuCandidateInstanceInfo != null)
-                        chosenCandidate = cpuCandidateInstanceInfo;
-                    else if (requestsCandidateInstanceInfo != null)
-                        chosenCandidate = requestsCandidateInstanceInfo;
-                    else
-                        chosenCandidate = complexityCandidateInstanceInfo;
-
-                }
-                if(chosenCandidate == null) {
-                    try {
-                        Thread.sleep(3000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                    if(chosenCandidate != null) {
+                        chosenCandidate.addRequest(requestInfo);
+                        System.out.println("Chosen candidate: " + chosenCandidate.getId());
                     }
+                }
+
+                // detected a still booting or a to be removed instance
+                if(notReadyInstanceDetected) {
+                    //auto scale and try again
+                    autoscale();
+                }
+
+                try {
+                    System.out.println("Sleeping 3 seconds...");
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    e.getStackTrace();
                 }
             }
 
-            chosenCandidate.addRequest(requestInfo);
-            System.out.println ("Choose candidate with id: " + chosenCandidate.getId());
             return chosenCandidate;
+
         }
 
 
@@ -312,6 +317,8 @@ public class WebServer {
             minInstancesFullyAvailable = Integer.parseInt(prop.getProperty("numberOfCPUs"));
             maxInstances = Integer.parseInt(prop.getProperty("numberOfCPUs"));
             minInstances = Integer.parseInt(prop.getProperty("minInstances"));
+            thresholdComplexity = Integer.parseInt(prop.getProperty("thresholdComplexity"));
+            scaleUpThreshold = Integer.parseInt(prop.getProperty("scaleUpThreshold"));
 
         } catch (IOException ex) {
             throw new RuntimeException("Error loading config file.");

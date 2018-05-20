@@ -50,7 +50,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.arrayAllocationCount = 0;
     }
 
-    @DynamoDBHashKey (attributeName = "key") public String getKey () {
+    @DynamoDBHashKey (attributeName = "key")
+    public String getKey () {
         return this.key;
     }
 
@@ -58,7 +59,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.key = key;
     }
 
-    @DynamoDBAttribute (attributeName = "completed") public boolean getCompleted () {
+    @DynamoDBAttribute (attributeName = "completed")
+    public boolean getCompleted () {
         return completed;
     }
 
@@ -66,7 +68,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.completed = completed;
     }
 
-    @DynamoDBAttribute (attributeName = "threadId") public long getThreadId () {
+    @DynamoDBAttribute (attributeName = "threadId")
+    public long getThreadId () {
         return threadId;
     }
 
@@ -74,7 +77,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.threadId = threadId;
     }
 
-    @DynamoDBAttribute (attributeName = "initX") public int getInitX () {
+    @DynamoDBAttribute (attributeName = "initX")
+    public int getInitX () {
         return initX;
     }
 
@@ -82,7 +86,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.initX = initX;
     }
 
-    @DynamoDBAttribute (attributeName = "initY") public int getInitY () {
+    @DynamoDBAttribute (attributeName = "initY")
+    public int getInitY () {
         return initY;
     }
 
@@ -90,7 +95,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.initY = initY;
     }
 
-    @DynamoDBAttribute (attributeName = "finalX") public int getFinalX () {
+    @DynamoDBAttribute (attributeName = "finalX")
+    public int getFinalX () {
         return finalX;
     }
 
@@ -98,7 +104,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.finalX = finalX;
     }
 
-    @DynamoDBAttribute (attributeName = "finalY") public int getFinalY () {
+    @DynamoDBAttribute (attributeName = "finalY")
+    public int getFinalY () {
         return finalY;
     }
 
@@ -106,7 +113,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.finalY = finalY;
     }
 
-    @DynamoDBAttribute (attributeName = "maze") public String getMaze () {
+    @DynamoDBAttribute (attributeName = "maze")
+    public String getMaze () {
         return maze;
     }
 
@@ -114,7 +122,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.maze = maze;
     }
 
-    @DynamoDBAttribute (attributeName = "strategy") public String getStrategy () {
+    @DynamoDBAttribute (attributeName = "strategy")
+    public String getStrategy () {
         return strategy;
     }
 
@@ -122,7 +131,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.strategy = strategy;
     }
 
-    @DynamoDBAttribute (attributeName = "velocity") public int getVelocity () {
+    @DynamoDBAttribute (attributeName = "velocity")
+    public int getVelocity () {
         return velocity;
     }
 
@@ -130,7 +140,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.velocity = velocity;
     }
 
-    @DynamoDBAttribute (attributeName = "instructionsCount") public long getInstructionsCount () {
+    @DynamoDBAttribute (attributeName = "instructionsCount")
+    public long getInstructionsCount () {
         return instructionsCount;
     }
 
@@ -138,7 +149,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.instructionsCount = instructionsCount;
     }
 
-    @DynamoDBAttribute (attributeName = "methodInvocationCount") public long getMethodInvocationCount () {
+    @DynamoDBAttribute (attributeName = "methodInvocationCount")
+    public long getMethodInvocationCount () {
         return methodInvocationCount;
     }
 
@@ -146,7 +158,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.methodInvocationCount = methodInvocationCount;
     }
 
-    @DynamoDBAttribute (attributeName = "objectAllocationCount") public long getObjectAllocationCount () {
+    @DynamoDBAttribute (attributeName = "objectAllocationCount")
+    public long getObjectAllocationCount () {
         return objectAllocationCount;
     }
 
@@ -154,7 +167,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         this.objectAllocationCount = objectAllocationCount;
     }
 
-    @DynamoDBAttribute (attributeName = "arrayAllocationCount") public long getArrayAllocationCount () {
+    @DynamoDBAttribute (attributeName = "arrayAllocationCount")
+    public long getArrayAllocationCount () {
         return arrayAllocationCount;
     }
 
@@ -190,7 +204,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 
     //Returns the ratio between the estimate and the real complexity
     public double calculateRatio () {
-        int estimate = RequestInfo.computeEstimatedComplexity(
+        double estimate = RequestInfo.computeEstimatedComplexity(
                 RequestInfo.getSize(maze), RequestInfo.getDistance(initX, initY, finalX, finalY), velocity);
         long complexity = this.computeComplexity();
 
@@ -198,7 +212,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
     }
 
 
-    @Override public String toString () {
+    @Override
+    public String toString () {
         return "Metric{" + "key='" + key + '\'' + ", completed=" + completed + ", threadId=" + threadId +
                 ", initX=" + initX + ", initY=" + initY + ", finalX=" + finalX + ", finalY=" + finalY + ", maze='" +
                 maze + '\'' + ", strategy='" + strategy + '\'' + ", velocity=" + velocity + ", instructionsCount=" +

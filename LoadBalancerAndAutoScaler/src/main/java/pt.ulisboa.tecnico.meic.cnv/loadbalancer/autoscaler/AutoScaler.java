@@ -64,11 +64,13 @@ public class AutoScaler implements Runnable {
 
                 //try to restore a toBeRemoved instance
 
-                if (getToBeDeletedList().size() > 1) {
-                    System.out.println("AutoScaler: Restoring: " + getToBeDeletedList().get(0).getId());
-                    getToBeDeletedList().get(0).restore();
-                    getToBeDeletedList().remove(0);
-                    return;
+                synchronized (AutoScaler.getToBeDeletedList()) {
+                    if (AutoScaler.getToBeDeletedList().size() >= 1) {
+                        System.out.println("AutoScaler: Restoring: " + getToBeDeletedList().get(0).getId());
+                        getToBeDeletedList().get(0).restore();
+                        getToBeDeletedList().remove(0);
+                        return;
+                    }
                 }
 
                 addEC2Instance();
@@ -92,15 +94,20 @@ public class AutoScaler implements Runnable {
             int numAvailableInstances = getContext().getInstanceList().size() - getToBeDeletedList().size();
             double numberInstancesMinusOne = numAvailableInstances - 1;
             double clusterMinusOneMaxLoad = WebServer.instanceCapacity * numberInstancesMinusOne;
-            double clusterMinusOneThresholdLoad = clusterMinusOneMaxLoad - WebServer.minAvailableComplexityPower - WebServer.maxAvailableComplexityPower;
+            double clusterMinusOneThresholdLoad = Math.max(0, clusterMinusOneMaxLoad - WebServer.minAvailableComplexityPower - WebServer.maxAvailableComplexityPower);
 
             if(numAvailableInstances > WebServer.minInstances &&
-                    getClusterComplexity() < clusterMinusOneThresholdLoad) {
+                    getClusterComplexity() <= clusterMinusOneThresholdLoad) {
 
                 System.out.println ("AutoScaler: -1 (scheduled)");
                 System.out.println("Cluster before: " + getClusterComplexity() + " / " + WebServer.instanceCapacity * numAvailableInstances);
 
                 InstanceInfo instanceInfo = findMinComplexityInstance();
+                if(instanceInfo == null){
+                    System.out.println("Zero instances found running.");
+                    return;
+                }
+
                 instanceInfo.remove();
                 getToBeDeletedList().add(instanceInfo);
 

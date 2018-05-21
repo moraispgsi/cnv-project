@@ -38,8 +38,6 @@ public class WebServer {
 
     public static void main(String[] args) throws Exception {
 
-        setShutdownHook();
-
         loadConfigFile();
 
 
@@ -48,6 +46,7 @@ public class WebServer {
 
         autoscaler = new AutoScaler(context); //The constructor prepares a min number of instances and blocks until they are running
 
+        setShutdownHook();
 
         System.out.println ("Starting load balancer web server...");
         HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);

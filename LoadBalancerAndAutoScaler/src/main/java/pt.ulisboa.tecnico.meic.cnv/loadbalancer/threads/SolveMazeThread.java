@@ -60,10 +60,16 @@ public class SolveMazeThread extends Thread {
             // Get elapsed time in milliseconds
             long elapsedTimeMillis = System.currentTimeMillis()-start;
 
+            // Get elapsed time in seconds
+            float elapsedTimeSec = elapsedTimeMillis/(1000F);
+
             // Get elapsed time in minutes
             float elapsedTimeMin = elapsedTimeMillis/(60*1000F);
 
-            System.out.println("Time: " +  elapsedTimeMin + "minutes.");
+            if(elapsedTimeSec <= 60)
+                System.out.println("Time: " +  elapsedTimeSec + " seconds.");
+            else
+                System.out.println("Time: " +  elapsedTimeMin + " minutes.");
 
         } catch (IOException e) {
             System.err.println("SolveMazeThread: Timeout on: " + requestURL);

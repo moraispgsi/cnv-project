@@ -1,6 +1,22 @@
 # cnv-project
 
-### To start the server locally:
+#Organization of Files
+## Modules
+
+### Server
+Contains the code of the server that is executed in the worker instances.
+
+### MazeRunner
+Contains the original code provided, the one that solves the Mazes
+
+### inst
+Contains BIT and an Instrumentation class responsible for instrumenting the MazeRunner module
+
+### LoadBalancerAndAutoScaler
+Contains the load balancer and autoscaler.
+
+
+# To start the server locally:
 
 `./gradlew server:run`
 
@@ -14,12 +30,14 @@ XL  - http://127.0.0.1/mzrun.html?m=Maze500.maze&x0=249&y0=250&x1=349&y1=348&v=1
 XXL - http://127.0.0.1/mzrun.html?m=Maze1000.maze&x0=2&y0=2&x1=700&y1=600&v=100&s=dfs  
 
 
-### To deploy to aws:
+## To deploy to aws:
 
-`./gradlew server:deploy`
+`./gradlew server:deploy`  
+`./gradlew LoadBalancerAndAutoScaler:deploy`
 
+Don't forget to start the instances prior to the deploy, or else... it will fail
 
-#### /etc/rc.local
+### Contents of /etc/rc.local
 
 ```
 app=server

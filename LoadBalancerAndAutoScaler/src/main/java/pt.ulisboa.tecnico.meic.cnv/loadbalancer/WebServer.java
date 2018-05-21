@@ -17,12 +17,13 @@ public class WebServer {
     public static final int PORT = 80;
     private static final String CONFIG_FILE = "../resources/config/config.properties";
 
-    public static int maxInstances = 0;
-    public static int minInstances = 0;
-    public static int thresholdComplexity = 0;
-    public static int scaleUpThreshold = 0;
-    public static int scaleDownThreshold = 0;
-    public static int minMetricSample = 0;
+    public static int maxInstances;
+    public static int minInstances;
+    public static double instanceCapacity;
+    public static double minAvailableComplexityPower;
+    public static double maxAvailableComplexityPower;
+    public static int minMetricSample;
+    public static int removeInstanceDelay;
 
 
     public static AtomicInteger instancesBooting = new AtomicInteger(0);
@@ -37,7 +38,7 @@ public class WebServer {
 
     public static void main(String[] args) throws Exception {
 
-        setShutdownHook(); //TODO
+        setShutdownHook();
 
         loadConfigFile();
 
@@ -45,9 +46,8 @@ public class WebServer {
         context = new Context("ami-cd7bcab0", "ec2InstanceKeyPair",
                 "launch-wizard-2", "t2.micro");
 
-        System.out.println ("Starting the autoscaler...");
         autoscaler = new AutoScaler(context); //The constructor prepares a min number of instances and blocks until they are running
-        threadAutoscaler = new Thread(autoscaler);
+
 
         System.out.println ("Starting load balancer web server...");
         HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
@@ -84,23 +84,104 @@ public class WebServer {
                     forwardRequest(chosenCandidate, httpExchange);
 
                     chosenCandidate.removeRequest(requestInfo);
+
                     break;
                 } catch (DeadInstanceException e) {
-                    System.out.println("Failed to solve request on instance " + chosenCandidate.getId() + ".");
-
-                    //remove request from dead isntance
-                    chosenCandidate.removeRequest(requestInfo);
+                    System.out.println(e.getMessage());
+                    retryCount++;
 
                     //remove dead instance
                     getContext().getInstanceList().remove(chosenCandidate);
+                    AutoScaler.getToBeDeletedList().remove(chosenCandidate);
 
-                    retryCount++;
-                    System.out.println("Retry number: " + retryCount);
+                    //dead instance detected, it's wise to run the autoscaler
+                    autoscale();
                 }
             }
 
             //autoScale at exit
             autoscale();
+
+        }
+
+        /**
+         * Starts a new AutoScaler Thread
+         */
+        private synchronized void autoscale(){
+            threadAutoscaler = new Thread(autoscaler);
+            threadAutoscaler.start();
+        }
+
+
+        /**
+         * Pick the best instance to run the following request.
+         * If necessary, autoScale and hold the request until a slot is available
+         *
+         * @param requestInfo
+         * @return the instance where the requestInfo is going to be ran
+         */
+        private InstanceInfo loadBalancerPicker(RequestInfo requestInfo) {
+
+            double minComplexity = 11; //outside of scope, to force the next number to be set to minimum
+            InstanceInfo chosenCandidate = null;
+
+
+            double newComplexity = getComplexity(requestInfo);
+
+
+            while(chosenCandidate == null) {
+                InstanceInfo toBeRemovedInstanceDetected = null;
+
+                synchronized (getContext().getInstanceList()) {
+
+                    //pick the instance with the minimum complexity
+                    for (InstanceInfo instanceInfo : getContext().getInstanceList()) {
+                        synchronized (instanceInfo) {
+
+                            // perform a healthCheck
+                            if (instanceInfo.isRunning()) {
+
+                                if (!instanceInfo.toBeRemoved()) {
+
+                                    //check if adding this request doesn't pass the threshold
+                                    if (instanceInfo.getComplexity() + newComplexity <= instanceCapacity &&
+                                            instanceInfo.getComplexity() < minComplexity) {
+
+                                        minComplexity = instanceInfo.getComplexity();
+                                        chosenCandidate = instanceInfo;
+                                    }
+
+                                } else {
+                                    toBeRemovedInstanceDetected = instanceInfo;
+                                }
+                            } else {
+                                if(instanceInfo.isBooting()){
+                                    System.out.println(instanceInfo.getId() + " still booting...");
+                                }
+                            }
+                        }
+                    }
+
+                    if(chosenCandidate != null) {
+                        chosenCandidate.addRequest(requestInfo);
+                        break;
+                    }
+                }
+
+                // non instance chosen, but a toBeremoved is available. restore
+                if(toBeRemovedInstanceDetected != null) {
+                    toBeRemovedInstanceDetected.restore();
+                    continue;
+                }
+
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    e.getStackTrace();
+                }
+            }
+
+            return chosenCandidate;
 
         }
 
@@ -117,25 +198,27 @@ public class WebServer {
             List<Metric> metrics = DynamoDB.getInstance().getMetrics();
             List<Metric> matches = new ArrayList<>();
             Double maxComplexity = 0.0;
+
             for (Metric metric : metrics) {
 
                 Double complexity = (double) metric.computeComplexity();
-                if (metric.match(requestInfo)) {
-                    matches.add(metric);
-                }
+                if(metric.getCompleted()) {
+                    if (metric.match(requestInfo)) {
+                        matches.add(metric);
+                    }
 
-                //Find the max complexity
-                if(complexity > maxComplexity) {
-                    maxComplexity = complexity;
+                    //Find the max complexity with the same strategy
+                    if (metric.getStrategy().equals(requestInfo.getStrategy())
+                            && complexity > maxComplexity) {
+                        maxComplexity = complexity;
+                    }
                 }
 
             }
 
-            System.out.println("Metrics " + metrics.size());
+            System.out.println("Found " + matches.size() +" / " + metrics.size() + " matches");
 
-            System.out.println("Matches " + matches.size());
-
-            if (matches.size() > minMetricSample) {
+            if (matches.size() >= minMetricSample) {
                 double sum = 0;
 
                 for (Metric metric : matches) {
@@ -146,87 +229,13 @@ public class WebServer {
                 double normalizedAverage = average * 10 / maxComplexity;
 
                 requestInfo.setEstimatedComplexity(normalizedAverage);
+                System.out.println("DynamoDB-Assist complexity: " + normalizedAverage);
                 return normalizedAverage;
             } else {
                 //default calculation
+                System.out.println("Default complexity: " + requestInfo.getEstimatedComplexity());
                 return requestInfo.getEstimatedComplexity();
             }
-        }
-
-
-        private void autoscale(){
-            threadAutoscaler.start();
-            threadAutoscaler = new Thread(autoscaler);
-        }
-
-        /**
-         * Pick the best instance to run the following request.
-         * If necessary, autoScale and hold the request until a slot is available
-         *
-         * @param requestInfo
-         * @return the instance where the requestInfo is going to be ran
-         */
-        private InstanceInfo loadBalancerPicker(RequestInfo requestInfo) {
-
-            double minComplexity = 0;
-
-
-            double newComplexity = getComplexity(requestInfo);
-            InstanceInfo chosenCandidate = null;
-
-            while(chosenCandidate == null) {
-                boolean notReadyInstanceDetected = false;
-
-                synchronized (getContext().getInstanceList()) {
-
-                    //pick the instance with the minimum complexity
-                    for (InstanceInfo instanceInfo : getContext().getInstanceList()) {
-                        synchronized (instanceInfo) {
-
-                            // check if booting and not to be removed
-
-
-                            //Do healthcheck
-                            if (instanceInfo.isRunning() && !instanceInfo.toBeRemoved()) {
-
-                                //check if adding this request doesn't pass the threshold
-                                if (instanceInfo.getComplexity() + newComplexity <= thresholdComplexity &&
-                                        (minComplexity == 0 || instanceInfo.getComplexity() <= minComplexity)) {
-
-                                    minComplexity = instanceInfo.getComplexity();
-                                    chosenCandidate = instanceInfo;
-                                }
-
-
-                            } else {
-                                notReadyInstanceDetected = true;
-                            }
-                        }
-                    }
-
-                    if(chosenCandidate != null) {
-                        chosenCandidate.addRequest(requestInfo);
-                        System.out.println("Chosen candidate: " + chosenCandidate.getId());
-                        break;
-                    }
-                }
-
-                // detected a still booting or a to be removed instance
-                if(notReadyInstanceDetected) {
-                    //auto scale and try again
-                    autoscale();
-                }
-
-                try {
-                    System.out.println("Sleeping 5 seconds...");
-                    Thread.sleep(5000);
-                } catch (InterruptedException e) {
-                    e.getStackTrace();
-                }
-            }
-
-            return chosenCandidate;
-
         }
 
 
@@ -241,8 +250,7 @@ public class WebServer {
                 if(!chosenCandidate.isRunning()) {
                     solveMazeThread.interrupt();
                     solveMazeThread.stop(); //trying to kill the thread...
-                    System.out.println("Dead instance: " + chosenCandidate.getId());
-                    throw new DeadInstanceException("Instance " + chosenCandidate.getId() + " died");
+                    throw new DeadInstanceException("DEAD instance detected: " + chosenCandidate.getId());
                 }
 
                 try {
@@ -252,11 +260,15 @@ public class WebServer {
                 }
             }
 
-            System.out.println(Thread.currentThread().getId() + ": Maze solved.");
+            System.out.println(Thread.currentThread().getId() + ": MazeSolver responded.");
         }
+
+
     }
 
+
     private static void loadConfigFile() {
+        System.out.println("Loading config file");
 
         Properties prop = new Properties();
         InputStream input = null;
@@ -268,12 +280,25 @@ public class WebServer {
             // load a properties file
             prop.load(input);
 
-            maxInstances = Integer.parseInt(prop.getProperty("numberOfCPUs"));
             minInstances = Integer.parseInt(prop.getProperty("minInstances"));
-            thresholdComplexity = Integer.parseInt(prop.getProperty("thresholdComplexity"));
-            scaleUpThreshold = Integer.parseInt(prop.getProperty("scaleUpThreshold"));
-            scaleDownThreshold = Integer.parseInt(prop.getProperty("scaleDownThreshold"));
+            maxInstances = Integer.parseInt(prop.getProperty("maxInstances"));
+            instanceCapacity = Double.parseDouble(prop.getProperty("instanceCapacity"));
+            minAvailableComplexityPower = Double.parseDouble(prop.getProperty("minAvailableComplexityPower"));
+            maxAvailableComplexityPower = Double.parseDouble(prop.getProperty("maxAvailableComplexityPower"));
             minMetricSample = Integer.parseInt(prop.getProperty("minMetricSample"));
+            removeInstanceDelay = Integer.parseInt(prop.getProperty("removeInstanceDelay"));
+
+            //Check value ranges
+            if(minInstances > maxInstances)
+                throw new RuntimeException("minInstance must be bigger than maxInstance");
+            if(instanceCapacity < 0 || instanceCapacity > 10)
+                throw new RuntimeException("instanceCapacity must be between 0 and 10");
+            if(minAvailableComplexityPower < 0 || minAvailableComplexityPower > 10)
+                throw new RuntimeException("minAvailableComplexityPower must be between 0 and 10");
+            if(maxAvailableComplexityPower < 0 || maxAvailableComplexityPower > 10 - minAvailableComplexityPower)
+                throw new RuntimeException("maxAvailableComplexityPower must be between 0 and (10-minAvailableComplexityPower)");
+
+
 
         } catch (IOException ex) {
             throw new RuntimeException("Error loading config file.");
@@ -292,7 +317,7 @@ public class WebServer {
     private static void setShutdownHook() {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
-                System.err.println("Shutting down instances... (not)");
+                System.err.println("Shutting down instances...");
                 AutoScaler.removeAll();
             }
         });

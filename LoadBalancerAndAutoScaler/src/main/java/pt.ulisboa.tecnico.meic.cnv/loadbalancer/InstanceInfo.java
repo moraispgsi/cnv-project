@@ -34,6 +34,12 @@ public class InstanceInfo {
         WebServer.instancesBooting.addAndGet(1);
     }
 
+    /**
+     * Check the real status of the instance.
+     * If status == running, return isBooting = false
+     * If status == terminated or stopped, dead instance detected. Remove from instanceList
+     * @return
+     */
     public boolean isBooting() {
         if (isBooting) {
             DescribeInstancesRequest describeInstancesRequest = new DescribeInstancesRequest();
@@ -51,14 +57,20 @@ public class InstanceInfo {
                 List<Instance> instanceList = reservation.getInstances();
                 for (Instance instance : instanceList) {
                     //if our instance is running
-                    if (instance.getInstanceId().equals(getId()) &&
-                            instance.getState().getName().equals("running")) { //not sure if it is done this way
-                        System.out.println("Instance " + instance.getInstanceId() + " is now running...");
-                        awsInstance = instance;
+                    if (instance.getInstanceId().equals(getId())) {
+                        if (instance.getState().getName().equals("running")) { //not sure if it is done this way
 
-                        isBooting = false;
-                        WebServer.instancesBooting.decrementAndGet();
-                        break;
+                            awsInstance = instance;
+                            isBooting = false;
+                            WebServer.instancesBooting.decrementAndGet();
+                            break;
+                        } else if(instance.getState().getName().equals("terminated") || instance.getState().getName().equals("stopped")){
+                            // dead instance, remove
+                            WebServer.instancesBooting.decrementAndGet();
+
+                            //remove it self from the instanceList
+                            WebServer.getContext().getInstanceList().remove(this);
+                        }
                     }
                 }
             }
@@ -69,8 +81,7 @@ public class InstanceInfo {
     }
 
     /**
-     * Check if is booting, updating it's info when it's not.
-     * Call a /healthCheck to check for alive response
+     * Call a /healthCheck to check for an alive response
      *
      * @return true if is running
      */
@@ -78,7 +89,7 @@ public class InstanceInfo {
 
         boolean alive = false;
 
-        if(!isBooting()) {
+        if(!isBooting) {
 
             URL requestURL;
 
@@ -99,7 +110,7 @@ public class InstanceInfo {
                 }
 
             } catch (IOException e) {
-                System.err.println("/healthCheck failed: " + getId());
+                //do nothing
             }
 
         }
@@ -108,16 +119,13 @@ public class InstanceInfo {
     }
 
 
-    public List<RequestInfo> getExecutingRequests() {
-        return executingRequests;
-    }
-
     public void addRequest(RequestInfo requestInfo) {
         executingRequests.add(requestInfo);
+        System.out.println("AfterAddRequest " + getId() + ": " + getComplexity());
     }
     public void removeRequest(RequestInfo requestInfo) {
-        System.out.println("Removing request");
         executingRequests.remove(requestInfo);
+        System.out.println("AfterRemoveRemove " + getId() + ": " + getComplexity());
         scheduleThreadToRemove();
     }
 
@@ -141,16 +149,16 @@ public class InstanceInfo {
 
                 removalThread = new Thread(){
                     public void run(){
-                        System.out.println("Scheduling id " + awsInstance.getInstanceId() + " is running. Sleeping 30 seconds...");
+                        System.out.println("Instance " + getId() + " to be removed in " + WebServer.removeInstanceDelay + " seconds...");
                         try {
-                            Thread.sleep(30000); //TODO
+                            Thread.sleep(WebServer.removeInstanceDelay * 1000);
                             synchronized (AutoScaler.getToBeDeletedList()) {
                                 AutoScaler.getToBeDeletedList().remove(this);
                                 AutoScaler.removeEC2Instance(awsInstance.getInstanceId());
                             }
 
                         } catch (InterruptedException e){
-                            System.out.println("RemovalThread of id" + awsInstance.getInstanceId() + " was interrupted");
+                            System.out.println("RemovalThread of instance " + getId() + " was interrupted");
                         }
 
                     }
@@ -170,7 +178,7 @@ public class InstanceInfo {
     }
 
     public double getComplexity() {
-        int sum = 0;
+        double sum = 0;
         for(RequestInfo requestInfo: this.executingRequests) {
             sum += requestInfo.getEstimatedComplexity();
         }

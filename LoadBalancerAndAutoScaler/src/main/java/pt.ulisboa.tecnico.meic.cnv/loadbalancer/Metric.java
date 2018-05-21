@@ -5,9 +5,12 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 
 
-@DynamoDBTable (tableName = "metrics") public class Metric {
+@DynamoDBTable (tableName = "metrics")
+public class Metric {
 
-    private double MATCH_DISTANCE_RANGE = 10;
+    // For a maze with size 250, we will match with every metric with a distance of at most 50 ( 250 * 0.2 = 50)
+    private double MATCH_DISTANCE_RANGE_PERCENTAGE = 0.2;
+
 
     private String key;
     private boolean completed;
@@ -177,7 +180,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
     }
 
     public long computeComplexity() {
-        return this.instructionsCount + this.methodInvocationCount + this.objectAllocationCount;
+        //TODO
+        return this.instructionsCount;// + this.methodInvocationCount + this.objectAllocationCount;
     }
 
     //Compares the metric with the requestInfo input data to see if it has significant similarities
@@ -193,8 +197,9 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
         }
 
         double distance = RequestInfo.getDistance(initX, initY, finalX, finalY);
-        //ignoring distances with a difference of more than MATCH_DISTANCE_RANGE
-        if(!(Math.abs(distance - requestInfo.getDistance()) > MATCH_DISTANCE_RANGE)) {
+
+        // ignoring distances with a difference of more than MATCH_DISTANCE_RANGE_PERCENTAGE of the maze size
+        if((Math.abs(distance - requestInfo.getDistance()) >  MATCH_DISTANCE_RANGE_PERCENTAGE * requestInfo.getSize())) {
             return false;
         }
 

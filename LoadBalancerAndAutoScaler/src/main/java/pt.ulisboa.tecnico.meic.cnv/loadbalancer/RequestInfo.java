@@ -10,7 +10,7 @@ import java.util.UUID;
 
 public class RequestInfo {
 
-    private static final int MAX_COMPLEXITY = 4000000; // 2000 * 1 * 2000
+    private static final int MAX_COMPLEXITY = 4000000; // maxDistance * minVelocity * maxMazeSide = 2000 * 1 * 2000
     private static final int MAX_VELOCITIY = 100;
     private int initX;
     private int initY;
@@ -19,7 +19,7 @@ public class RequestInfo {
     private int velocity;
     private String strategy;
     private String maze;
-    private double estimatedComplexity = 0;
+    private double estimatedComplexity = 0.0;
     private UUID uuid;
 
 

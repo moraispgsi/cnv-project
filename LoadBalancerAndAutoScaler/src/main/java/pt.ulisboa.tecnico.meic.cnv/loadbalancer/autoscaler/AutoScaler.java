@@ -34,49 +34,71 @@ public class AutoScaler implements Runnable {
 
     @Override
     public void run() {
-
+        System.out.println("AutoScaler Run");
         checkPlusOne();
         checkMinusOne();
     }
 
+    /**
+     * Conditions for scaleUp:
+     *  1. maxInstances haven't been reached
+     *  2. numAvailableInstances are below minInstances
+     *   or
+     *  3. minAvailableComplexityPower has been reached
+     *
+     *  Try to reuse a toBeRemove instance if available
+     *  otherwise, launch a new instance
+     */
     private void checkPlusOne(){
-        System.out.println ("AutoScaler: checking plus one");
 
         synchronized (context.getInstanceList()) {
             int numAvailableInstances = getContext().getInstanceList().size() - getToBeDeletedList().size();
-            if(numAvailableInstances < WebServer.maxInstances &&
-                    getClusterComplexity() + WebServer.scaleUpThreshold > WebServer.thresholdComplexity * numAvailableInstances) {
+
+            if(numAvailableInstances < WebServer.maxInstances && (
+                    WebServer.minInstances > numAvailableInstances ||
+                            getClusterComplexity() + WebServer.minAvailableComplexityPower > WebServer.instanceCapacity * numAvailableInstances)) {
 
                 System.out.println("AutoScaler: +1");
+                System.out.println("Cluster before: " + getClusterComplexity() + " / " + WebServer.instanceCapacity * numAvailableInstances);
 
 
                 //try to restore a toBeRemoved instance
 
                 if (getToBeDeletedList().size() > 1) {
-                    System.out.println("AutoScaler: Reusing a scheduled to be removed instance. id: " + getToBeDeletedList().get(0).getId());
+                    System.out.println("AutoScaler: Restoring: " + getToBeDeletedList().get(0).getId());
                     getToBeDeletedList().get(0).restore();
                     getToBeDeletedList().remove(0);
                     return;
                 }
 
                 addEC2Instance();
+                System.out.println("Cluster after: " + getClusterComplexity() + " / " + WebServer.instanceCapacity * numAvailableInstances);
+
             }
         }
 
     }
 
+    /**
+     * Conditions to scaleDown:
+     * 1. numInstances is not at a minimum
+     * 2. clusterComplexity e smaller than the maxAvailableComplexityPower x clusterMinusOneMaxLoad
+     *
+     */
     private void checkMinusOne(){
-        System.out.println ("AutoScaler: checking minus one");
 
         synchronized (context.getInstanceList()) {
-            int numInstances = getContext().getInstanceList().size();
-            double numberInstancesMinusOne = context.getInstanceList().size() - 1;
-            double clusterMinusOneMaxLoad = WebServer.thresholdComplexity * numberInstancesMinusOne;
-            double clusterMinusOneThresholdLoad = clusterMinusOneMaxLoad * WebServer.scaleDownThreshold;
 
-            if(numInstances > WebServer.minInstances &&
+            int numAvailableInstances = getContext().getInstanceList().size() - getToBeDeletedList().size();
+            double numberInstancesMinusOne = numAvailableInstances - 1;
+            double clusterMinusOneMaxLoad = WebServer.instanceCapacity * numberInstancesMinusOne;
+            double clusterMinusOneThresholdLoad = clusterMinusOneMaxLoad - WebServer.minAvailableComplexityPower - WebServer.maxAvailableComplexityPower;
+
+            if(numAvailableInstances > WebServer.minInstances &&
                     getClusterComplexity() < clusterMinusOneThresholdLoad) {
-                System.out.println ("AutoScaler: -1");
+
+                System.out.println ("AutoScaler: -1 (scheduled)");
+                System.out.println("Cluster before: " + getClusterComplexity() + " / " + WebServer.instanceCapacity * numAvailableInstances);
 
                 InstanceInfo instanceInfo = findMinComplexityInstance();
                 instanceInfo.remove();
@@ -86,7 +108,11 @@ public class AutoScaler implements Runnable {
         }
     }
 
-
+    /**
+     * Gets the sum of all instanceInfo's complexity, excluding the ones marked to be removed
+     *
+     * @return
+     */
     private double getClusterComplexity() {
 
         double clusterComplexity = 0;
@@ -99,71 +125,17 @@ public class AutoScaler implements Runnable {
 
     }
 
-
-
-    /*while(true) {
-        try {
-
-
-            Thread.sleep(2000);
-
-            synchronized (context.getInstanceList()) {
-                List<InstanceInfo> availableInstanceInfoList = new ArrayList<>();
-
-                //Filter available instances
-                for(InstanceInfo instanceInfo : context.getInstanceList()) {
-                    if(!instanceInfo.toBeRemoved()) {
-                        availableInstanceInfoList.add(instanceInfo);
-                    }
-                }
-
-                int clusterSize = availableInstanceInfoList.size();
-                int clusterComplexity = 0;
-
-                for(InstanceInfo instanceInfo : availableInstanceInfoList) {
-                    clusterComplexity += instanceInfo.getComplexity();
-                }
-
-                //Decision
-                if(clusterSize > 1 && clusterSize * MIN_LOAD_COMPLEXITY > clusterComplexity) {
-                    //The cluster has too much nodes for its load
-                    queueInstanceRemoval();
-                } else if(clusterSize > 1 && clusterSize * MAX_LOAD_COMPLEXITY < clusterComplexity) {
-                    //The cluster has too much load for its nodes
-                    //TODO - check how many we have to create
-                    addEC2Instance();
-                }
-
-            }
-
-            synchronized (context.getInstanceList()) {
-                List<InstanceInfo> instanceInfoList = context.getInstanceList();
-                Iterator<InstanceInfo> iterator = instanceInfoList.iterator();
-                while(iterator.hasNext()) {
-                    InstanceInfo instanceInfo = iterator.next();
-                    if(instanceInfo.toBeRemoved() &&
-                            instanceInfo.getExecutingRequests().size() == 0) {
-
-                        removeEC2Instance(context.getEc2(), instanceInfo.getId()); //remove from EC2
-                        iterator.remove(); //Remove from the list
-                    }
-                }
-            }
-
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-}
-*/
+    /**
+     * Find the minimum complexity instance that's live and running
+     *
+     * @return
+     */
     private InstanceInfo findMinComplexityInstance() {
-
         double minComplexity = 0;
         InstanceInfo complexityCandidateInstanceInfo = null;
 
-
         for (InstanceInfo instanceInfo : getContext().getInstanceList()) {
-            if (!instanceInfo.isRunning() && !instanceInfo.toBeRemoved()) {
+            if (instanceInfo.isRunning() && !instanceInfo.toBeRemoved()) {
 
                 if (minComplexity == 0 || instanceInfo.getComplexity() <= minComplexity) {
                     minComplexity = instanceInfo.getComplexity();
@@ -173,36 +145,15 @@ public class AutoScaler implements Runnable {
         }
 
         return complexityCandidateInstanceInfo;
-
     }
 
 
-
-
-    public void queueInstanceRemoval() {
-        synchronized (context.getInstanceList()) {
-            int availableCount = 0;
-            List<InstanceInfo> instanceInfoList = context.getInstanceList();
-            for(InstanceInfo instanceInfo: instanceInfoList) {
-                if(!instanceInfo.toBeRemoved()) {
-                    availableCount ++;
-                }
-            }
-
-            if(availableCount > WebServer.minInstances) {
-                //We can choose a random instance because the load balancer will not redirect any more requests to the
-                // instance, making its resource usage eventually 0, without disrupting its previously assign requests.
-                Random random = new Random();
-                int removeIndex = random.nextInt(instanceInfoList.size() + 1);
-                instanceInfoList.get(removeIndex).remove();
-            }
-        }
-    }
-
-
+    /**
+     * Add a new instance to AWS.
+     * Add newly created instance to
+     *
+     */
     private void addEC2Instance() {
-
-
         AmazonEC2 ec2 = getContext().getEc2();
 
         RunInstancesRequest runInstancesRequest = new RunInstancesRequest();
@@ -220,51 +171,18 @@ public class AutoScaler implements Runnable {
 
         InstanceInfo instanceInfo = new InstanceInfo(newInstancesList.get(0));
 
-        synchronized (getContext().getInstanceList()) {
-            getContext().addInstance(instanceInfo);
-        }
+
+        getContext().addInstance(instanceInfo);
+
         System.out.println ("AutoScaler: added new ec2 instance with id: " + instanceInfo.getId());
     }
 
 
-/*
-
-        List<String> newInstanceIdList = new ArrayList<>();
-
-        for(Instance i : newInstancesList){
-            newInstanceIdList.add(i.getInstanceId());
-        }
-
-
-
-        //TODO - Test the instance's health by sending a ping.
-
-        System.out.println ("Waiting for instance " + newInstanceId + "  to be available...");
-
-        //While true :/
-        while(true) {
-            Thread.sleep(2000);
-            DescribeInstancesRequest describeInstancesRequest = new DescribeInstancesRequest();
-            describeInstancesRequest.setInstanceIds(instanceIdsList); //Describe this instances
-            DescribeInstancesResult describeInstancesResult = ec2.describeInstances(describeInstancesRequest);
-            List<Reservation> reservations  = describeInstancesResult.getReservations();
-
-            for (Reservation reservation : reservations){
-                List <Instance> instanceList = reservation.getInstances();
-                for (Instance instance : instanceList){
-                    //if our instance is running
-                    if(instance.getInstanceId().equals(newInstanceId) &&
-                            instance.getState().getName().equals("running")) { //not sure if it is done this way
-                        System.out.println ("Instance " + instance.getInstanceId () + " is now running...");
-                        return instance;
-                    }
-                }
-            }
-        }*/
-
-
-
-    //Removes an EC2 instance by ID
+    /**
+     * Removes an EC2 instance by ID from AWS
+     *
+     * @param instanceId
+     */
     public static void removeEC2Instance(String instanceId) {
         TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
         termInstanceReq.withInstanceIds(instanceId);
@@ -272,6 +190,9 @@ public class AutoScaler implements Runnable {
         System.out.println ("Removed instance with id, " + instanceId + " from aws.");
     }
 
+    /**
+     * Terminates all instances from AWS
+     */
     public static void removeAll(){
         System.out.println ("Trying to remove all instances from aws");
         for(InstanceInfo instanceInfo : WebServer.getContext().getInstanceList()){

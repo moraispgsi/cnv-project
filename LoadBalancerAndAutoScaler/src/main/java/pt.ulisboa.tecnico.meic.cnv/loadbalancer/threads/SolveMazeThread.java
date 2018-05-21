@@ -40,8 +40,11 @@ public class SolveMazeThread extends Thread {
 
         try {
             URLConnection urlConnection = requestURL.openConnection();
-            urlConnection.setReadTimeout(1000*60*10); //10 min
+            urlConnection.setReadTimeout(1000*60*30); //30 min
             urlConnection.setConnectTimeout(0);
+
+            // Get current time
+            long start = System.currentTimeMillis();
 
             // un-blockable operation
             BufferedReader in = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
@@ -52,15 +55,31 @@ public class SolveMazeThread extends Thread {
                 response.append(inputLine).append('\n');
             in.close();
 
-            //Return response
-            httpExchange.sendResponseHeaders(200, response.length());
-            OutputStream os = httpExchange.getResponseBody();
-            os.write(response.toString().getBytes(), 0, response.toString().getBytes().length);
-            os.close();
+            httpRespose(200, response);
+
+            // Get elapsed time in milliseconds
+            long elapsedTimeMillis = System.currentTimeMillis()-start;
+
+            // Get elapsed time in minutes
+            float elapsedTimeMin = elapsedTimeMillis/(60*1000F);
+
+            System.out.println("Time: " +  elapsedTimeMin + "minutes.");
 
         } catch (IOException e) {
-            e.printStackTrace();
-            return;
+            System.err.println("SolveMazeThread: Timeout on: " + requestURL);
+            try {
+                httpRespose(200, new StringBuilder("Your request failed, for unknown reasons. (probably a timeout)"));
+            } catch (IOException e1) {
+                //do nothing
+            }
         }
+    }
+
+    private void httpRespose(int statusCode, StringBuilder response) throws IOException {
+        //Return response
+        httpExchange.sendResponseHeaders(statusCode, response.length());
+        OutputStream os = httpExchange.getResponseBody();
+        os.write(response.toString().getBytes(), 0, response.toString().getBytes().length);
+        os.close();
     }
 }

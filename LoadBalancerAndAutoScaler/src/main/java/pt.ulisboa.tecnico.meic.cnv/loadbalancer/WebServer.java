@@ -14,7 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class WebServer {
-    public static final int PORT = 80;
+    public static final int PORT = 8000;
     private static final String CONFIG_FILE = "../resources/config/config.properties";
 
     public static int maxInstances;
